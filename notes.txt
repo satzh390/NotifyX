@@ -1,9 +1,0 @@
-Entities:
-Event - type, data [https://github.com/cloudevents/spec?tab=readme-ov-file]
-Template - Email, sms
-UserConfig - emailId, phoneNumber(Can be extended for user preference), eventTypes[]
-
-
-Config:
-Rules - eventType, notifier[]
-Notifier - channel[sms|email], template
