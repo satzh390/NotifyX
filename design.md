@@ -4,6 +4,17 @@ NotifyX is an event-driven, highly scalable, real-time notification system desig
 
 ---
 
+## 🔷 Core Services Overview
+
+| Service | Better Name | Purpose | Notes |
+|--------|-------------|---------|-------|
+| **API + user/tenant config service** | `notifyx-api` | Public-facing REST APIs | Handles event ingestion, user/tenant management, rule configuration, and authentication |
+| **Event ingestion + rule evaluation** | `notifyx-processor` | Consumes events, resolves rules, fanout | Real-time stream processing; evaluates notification rules and routes to appropriate channels |
+| **Delivery worker (email, SMS, webhook)** | `notifyx-worker` | One binary; per-channel workers via config | Modular workers spawned based on config; supports pluggable providers (SendGrid, Twilio, etc.) |
+| **Admin UI** | `notifyx-console` | Angular/React | Web-based dashboard for managing tenants, rules, templates, and monitoring delivery |
+
+---
+
 ## 🔷 Architecture Overview
 
 NotifyX is organized into four major functional layers. Each layer is horizontally scalable and pluggable so customers can bring their own storage, brokers, and notifiers.
@@ -50,6 +61,7 @@ A web-based console for operators to manage configuration and inspect system sta
 - Search/filter by `org_id`, event type, user, delivery status
 
 ---
+
 
 ## 🔷 Core Design Principles
 
