@@ -6,7 +6,7 @@ NotifyX is an event-driven, highly scalable, real-time notification system desig
 
 ## 🔷 Core Services Overview
 
-| Service | Better Name | Purpose | Notes |
+| Service | Name | Purpose | Notes |
 |--------|-------------|---------|-------|
 | **API + user/tenant config service** | `notifyx-api` | Public-facing REST APIs | Handles event ingestion, user/tenant management, rule configuration, and authentication |
 | **Event ingestion + rule evaluation** | `notifyx-processor` | Consumes events, resolves rules, fanout | Real-time stream processing; evaluates notification rules and routes to appropriate channels |
