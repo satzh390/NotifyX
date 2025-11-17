@@ -109,7 +109,7 @@ UI features:
   - `subscriberId` (external eg: UserId)
   - `org_id` (For Non SAAS product like ecommerce, org_id can be some unique identifier like flipkart,  myntra)
   - `email`, `phone`, `pushToken`, `webhookUrl`
-  - `preferences` { channels: { email/sms/push/webhook: true/false }, language, dndWindow }
+  - `preferences` { channels: { email/sms/push/webhook: true/false }, language, allowedDays[], notificationWindow { start, end } }
   - `subscribedEventTypes: [string]`(Will add this preference later)
   - `groups: [groupId]`
   - `metadata` (optional)

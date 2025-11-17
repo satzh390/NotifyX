@@ -1,0 +1,95 @@
+package config
+
+import (
+	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/spf13/viper"
+)
+
+type Config struct {
+	HTTP struct {
+		Addr string `mapstructure:"addr"`
+	} `mapstructure:"http"`
+	OAuth struct {
+		Issuer    string   `mapstructure:"issuer"`
+		JWKS      string   `mapstructure:"jwks"`
+		Audiences []string `mapstructure:"audiences"`
+	} `mapstructure:"oauth"`
+	Storage struct {
+		Mongo struct {
+			URI      string `mapstructure:"uri"`
+			Database string `mapstructure:"database"`
+		} `mapstructure:"mongo"`
+		S3 struct {
+			Bucket      string `mapstructure:"bucket"`
+			Region      string `mapstructure:"region"`
+			Endpoint    string `mapstructure:"endpoint"`
+			KeyPrefix   string `mapstructure:"keyPrefix"`
+			AccessKeyID string `mapstructure:"accessKeyId"`
+			SecretKey   string `mapstructure:"secretKey"`
+		} `mapstructure:"s3"`
+	} `mapstructure:"storage"`
+}
+
+func Load(path string) (Config, error) {
+	viperInstance := viper.New()
+	viperInstance.SetConfigFile(path)
+	viperInstance.SetConfigType("yaml")
+	viperInstance.SetEnvPrefix("NOTIFYX_API")
+	viperInstance.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
+	viperInstance.AutomaticEnv()
+
+	if err := viperInstance.ReadInConfig(); err != nil {
+		return Config{}, fmt.Errorf("config: %w", err)
+	}
+
+	var config Config
+	if err := viperInstance.Unmarshal(&config); err != nil {
+		return Config{}, fmt.Errorf("config: unmarshal: %w", err)
+	}
+
+	audiences, err := castAudiences(viperInstance.Get("oauth.audiences"))
+	if err != nil {
+		return Config{}, err
+	}
+	config.OAuth.Audiences = audiences
+
+	if config.OAuth.Issuer == "" || config.OAuth.JWKS == "" {
+		return Config{}, errors.New("config: oauth issuer and jwks are required")
+	}
+	if config.Storage.Mongo.URI == "" || config.Storage.Mongo.Database == "" {
+		return Config{}, errors.New("config: storage.mongo uri and database are required")
+	}
+	if config.Storage.S3.Bucket == "" {
+		return Config{}, errors.New("config: storage.s3 bucket is required")
+	}
+	if config.Storage.S3.Region == "" {
+		config.Storage.S3.Region = "us-east-1"
+	}
+
+	return config, nil
+}
+
+func castAudiences(value any) ([]string, error) {
+	switch val := value.(type) {
+	case []string:
+		return val, nil
+	case []any:
+		result := make([]string, 0, len(val))
+		for _, item := range val {
+			strValue, ok := item.(string)
+			if !ok {
+				return nil, errors.New("config: oauth.audiences must contain only strings")
+			}
+			if strValue != "" {
+				result = append(result, strValue)
+			}
+		}
+		return result, nil
+	default:
+		return nil, errors.New("config: oauth.audiences must be a list of strings")
+	}
+}
+

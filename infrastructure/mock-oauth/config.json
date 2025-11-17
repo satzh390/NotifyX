@@ -1,0 +1,22 @@
+{
+  "interactiveLogin": true,
+  "token": {
+    "expiresIn": 3600
+  },
+  "issuers": [
+    {
+      "issuer": "http://localhost:8081/default",
+      "audiences": [
+        "notifyx-api"
+      ],
+      "claims": {
+        "orgId": "acme"
+      },
+      "defaultScopes": [
+        "notify:read",
+        "notify:write"
+      ]
+    }
+  ]
+}
+

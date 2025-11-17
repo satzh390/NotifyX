@@ -23,3 +23,19 @@ NotifyX is a high-performance, event-driven notification system designed to deli
 This repository does not include a license file. Add a license (e.g., `MIT` or `Apache-2.0`) as appropriate for your project.
 
 ---
+
+## Local Infrastructure
+
+Launch the supporting services (MongoDB, Kafka, LocalStack, mock OAuth server) with:
+
+```
+docker compose -f docker-compose.local.yaml up -d
+```
+
+The mock OAuth server issues tokens for issuer `http://localhost:8081/default` with scopes `notify:read` and `notify:write`. Update `app/api/config/config.yaml` if you need different claims or audiences. When you're done testing, tear everything down with:
+
+```
+docker compose -f docker-compose.local.yaml down -v
+```
+
+By default the API expects MongoDB at `mongodb://localhost:27017/notifyx`; adjust `storage.mongo` inside `app/api/config/config.yaml` if you point it somewhere else.

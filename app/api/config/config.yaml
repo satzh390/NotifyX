@@ -1,0 +1,20 @@
+http:
+  addr: ":8080"
+
+oauth:
+  issuer: "http://localhost:8081/default"
+  jwks: "http://localhost:8081/default/jwks"
+  audiences:
+    - "notifyx-api"
+
+storage:
+  mongo:
+    uri: "mongodb://localhost:27017"
+    database: "notifyx"
+  s3:
+    bucket: "notifyx-templates"
+    region: "us-east-1"
+    endpoint: "http://localhost:4566"  # LocalStack endpoint
+    accessKeyId: "test"
+    secretKey: "test"
+
