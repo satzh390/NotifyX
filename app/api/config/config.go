@@ -50,12 +50,6 @@ func Load(path string) (Config, error) {
 		return Config{}, fmt.Errorf("config: unmarshal: %w", err)
 	}
 
-	audiences, err := castAudiences(viperInstance.Get("oauth.audiences"))
-	if err != nil {
-		return Config{}, err
-	}
-	config.OAuth.Audiences = audiences
-
 	if config.OAuth.Issuer == "" || config.OAuth.JWKS == "" {
 		return Config{}, errors.New("config: oauth issuer and jwks are required")
 	}
@@ -70,26 +64,5 @@ func Load(path string) (Config, error) {
 	}
 
 	return config, nil
-}
-
-func castAudiences(value any) ([]string, error) {
-	switch val := value.(type) {
-	case []string:
-		return val, nil
-	case []any:
-		result := make([]string, 0, len(val))
-		for _, item := range val {
-			strValue, ok := item.(string)
-			if !ok {
-				return nil, errors.New("config: oauth.audiences must contain only strings")
-			}
-			if strValue != "" {
-				result = append(result, strValue)
-			}
-		}
-		return result, nil
-	default:
-		return nil, errors.New("config: oauth.audiences must be a list of strings")
-	}
 }
 

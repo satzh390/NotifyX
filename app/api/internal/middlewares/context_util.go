@@ -13,4 +13,3 @@ func OrgIDFromCtx(fiberCtx *fiber.Ctx) string {
 	}
 	return ""
 }
-

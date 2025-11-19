@@ -51,4 +51,3 @@ func RegisterRoutes(app *fiber.App, stores storage.Stores, validator auth.Valida
 	templates.Put("/:id", middlewares.RequireAuth(validator, notifyWritePermission), templateHandler.Update)
 	templates.Delete("/:id", middlewares.RequireAuth(validator, notifyWritePermission), templateHandler.Delete)
 }
-

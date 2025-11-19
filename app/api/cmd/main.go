@@ -65,4 +65,3 @@ func main() {
 		log.Fatalf("notifyx-api exited: %v", err)
 	}
 }
-

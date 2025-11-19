@@ -22,13 +22,13 @@ func NewTemplateHandler(store storage.TemplateStore) *TemplateHandler {
 }
 
 type templateRequest struct {
-	ID        string            `json:"id"`
-	Name      string            `json:"name"`
-	Channel   domain.ChannelType `json:"channel"`
-	Version   int               `json:"version"`
-	Body      string            `json:"body"`
-	Subject   string            `json:"subject"`
-	Metadata  map[string]string `json:"metadata"`
+	ID       string             `json:"id"`
+	Name     string             `json:"name"`
+	Channel  domain.ChannelType `json:"channel"`
+	Version  int                `json:"version"`
+	Body     string             `json:"body"`
+	Subject  string             `json:"subject"`
+	Metadata map[string]string  `json:"metadata"`
 }
 
 func (handler *TemplateHandler) Create(fiberCtx *fiber.Ctx) error {
@@ -123,7 +123,7 @@ func (handler *TemplateHandler) Update(fiberCtx *fiber.Ctx) error {
 }
 
 func (handler *TemplateHandler) Delete(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
+	orgID := OrgIDFromCtx(fiberCtx)
 	templateID := fiberCtx.Params("id")
 	if templateID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing template id")
@@ -138,4 +138,3 @@ func (handler *TemplateHandler) Delete(fiberCtx *fiber.Ctx) error {
 
 	return fiberCtx.SendStatus(http.StatusNoContent)
 }
-

@@ -23,7 +23,7 @@ type Claims struct {
 	Subject string
 }
 
-type Validator interface {
+type AuthValidator interface {
 	Validate(ctx context.Context, token string) (Claims, error)
 }
 
@@ -42,7 +42,7 @@ func NewJWKSValidator(ctx context.Context, issuer, jwksURL string, audience []st
 	}
 
 	opts := keyfunc.Options{
-		Ctx:               ctx,
+		Ctx: ctx,
 		RefreshErrorHandler: func(err error) {
 			// ignore refresh errors, will retry on next interval
 		},
@@ -69,7 +69,6 @@ func (validator *JWKSValidator) Validate(ctx context.Context, token string) (Cla
 
 	parserOpts := []jwt.ParserOption{
 		jwt.WithIssuer(validator.issuer),
-		jwt.WithContext(ctx),
 		jwt.WithValidMethods([]string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512"}),
 	}
 	if len(validator.audience) > 0 {
@@ -156,4 +155,3 @@ func HasScopes(claims Claims, required ...string) bool {
 	}
 	return true
 }
-

@@ -51,4 +51,3 @@ func (server *Server) Run(ctx context.Context) error {
 		return nil
 	}
 }
-

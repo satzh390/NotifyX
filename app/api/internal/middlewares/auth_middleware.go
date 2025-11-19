@@ -12,7 +12,7 @@ const (
 	scopesContextKey = "scopes"
 )
 
-func RequireAuth(validator auth.Validator, scopes ...string) fiber.Handler {
+func RequireAuth(validator auth.AuthValidator, scopes ...string) fiber.Handler {
 	return func(fiberCtx *fiber.Ctx) error {
 		token, err := extractBearer(fiberCtx.Get(fiber.HeaderAuthorization))
 		if err != nil {
@@ -51,4 +51,3 @@ func extractBearer(header string) (string, error) {
 	}
 	return token, nil
 }
-

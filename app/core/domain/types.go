@@ -113,7 +113,6 @@ type DeliveryLog struct {
 	Metadata  map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
 }
 
-// Pagination types
 type PaginationParams struct {
 	Page     int `json:"page"`     // 1-based page number
 	PageSize int `json:"pageSize"` // Number of items per page
@@ -135,17 +134,16 @@ const (
 )
 
 // SortOption represents a single sort field and direction
-type SortOption struct {
+type SortParams struct {
 	Field string    `json:"field"` // Field name to sort by
 	Order SortOrder `json:"order"` // Sort direction (asc/desc)
 }
 
-// ListOptions contains pagination, filtering, and sorting options
+// PageAndSortOption contains pagination and sorting options
 type ListOptions struct {
 	Pagination PaginationParams
-	OrgID      string       // Organization filter (required)
-	GroupID    string       // Group filter (for subscribers only)
-	SortBy     []SortOption // Sort options (multiple fields supported)
+	SortBy     []SortParams // Sort options (multiple fields supported)
+	Filter     map[string]string
 }
 
 // ListResult contains paginated results
@@ -153,4 +151,3 @@ type ListResult[T any] struct {
 	Items      []T              `json:"items"`
 	Pagination PaginationResult `json:"pagination"`
 }
-

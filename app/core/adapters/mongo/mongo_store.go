@@ -92,59 +92,19 @@ func (repo *SubscriberRepository) Get(ctx context.Context, orgID, subscriberID s
 }
 
 func (repo *SubscriberRepository) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Subscriber], error) {
-	if opts.OrgID == "" {
-		return domain.ListResult[domain.Subscriber]{}, errors.New("orgID is required")
-	}
+	filter := buildBsonFilter(opts)
+	page, pageSize := pageOrDefaultParam(opts)
 
-	// Build filter
-	filter := bson.M{"orgId": opts.OrgID}
-	if opts.GroupID != "" {
-		// MongoDB matches if the value is in the array
-		filter["groups"] = opts.GroupID
-	}
-
-	// Set default pagination if not provided
-	page := opts.Pagination.Page
-	if page < 1 {
-		page = 1
-	}
-	pageSize := opts.Pagination.PageSize
-	if pageSize < 1 {
-		pageSize = 20 // default page size
-	}
-	if pageSize > 100 {
-		pageSize = 100 // max page size
-	}
-
-	// Count total documents
 	totalCount, err := repo.collection.CountDocuments(ctx, filter)
 	if err != nil {
 		return domain.ListResult[domain.Subscriber]{}, fmt.Errorf("mongo: count: %w", err)
 	}
 
-	// Calculate skip
-	skip := int64((page - 1) * pageSize)
-
-	// Find with pagination
+	skip := int64(page * pageSize)
 	findOpts := options.Find().
 		SetSkip(skip).
 		SetLimit(int64(pageSize))
-
-	// Apply sorting if specified
-	if len(opts.SortBy) > 0 {
-		sortDoc := bson.D{}
-		for _, sort := range opts.SortBy {
-			order := 1 // ascending
-			if sort.Order == domain.SortDesc {
-				order = -1 // descending
-			}
-			sortDoc = append(sortDoc, bson.E{Key: sort.Field, Value: order})
-		}
-		findOpts.SetSort(sortDoc)
-	} else {
-		// Default sort by createdAt descending (newest first)
-		findOpts.SetSort(bson.D{{Key: "createdAt", Value: -1}})
-	}
+	findOpts.SetSort(buildBsonSort(opts, map[string]int{"createdAt": -1}))
 
 	cursor, err := repo.collection.Find(ctx, filter, findOpts)
 	if err != nil {
@@ -159,7 +119,6 @@ func (repo *SubscriberRepository) List(ctx context.Context, opts domain.ListOpti
 
 	// Calculate total pages
 	totalPages := int(math.Ceil(float64(totalCount) / float64(pageSize)))
-
 	return domain.ListResult[domain.Subscriber]{
 		Items: subscribers,
 		Pagination: domain.PaginationResult{
@@ -205,52 +164,19 @@ func (repo *GroupRepository) Get(ctx context.Context, orgID, groupID string) (do
 }
 
 func (repo *GroupRepository) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Group], error) {
-	if opts.OrgID == "" {
-		return domain.ListResult[domain.Group]{}, errors.New("orgID is required")
-	}
+	filter := buildBsonFilter(opts)
+	page, pageSize := pageOrDefaultParam(opts)
 
-	// Build filter
-	filter := bson.M{"orgId": opts.OrgID}
-
-	// Set default pagination if not provided
-	page := opts.Pagination.Page
-	if page < 1 {
-		page = 1
-	}
-	pageSize := opts.Pagination.PageSize
-	if pageSize < 1 {
-		pageSize = 20 // default page size
-	}
-	if pageSize > 100 {
-		pageSize = 100 // max page size
-	}
-
-	// Count total documents
 	totalCount, err := repo.collection.CountDocuments(ctx, filter)
 	if err != nil {
 		return domain.ListResult[domain.Group]{}, fmt.Errorf("mongo: count: %w", err)
 	}
 
-	// Calculate skip
-	skip := int64((page - 1) * pageSize)
-
-	// Find with pagination
+	skip := int64(page * pageSize)
 	findOpts := options.Find().
 		SetSkip(skip).
 		SetLimit(int64(pageSize))
-
-	// Apply sorting if specified
-	if len(opts.SortBy) > 0 {
-		sortDoc := bson.D{}
-		for _, sort := range opts.SortBy {
-			order := 1 // ascending
-			if sort.Order == domain.SortDesc {
-				order = -1 // descending
-			}
-			sortDoc = append(sortDoc, bson.E{Key: sort.Field, Value: order})
-		}
-		findOpts.SetSort(sortDoc)
-	}
+	findOpts.SetSort(buildBsonSort(opts, map[string]int{"createdAt": -1}))
 
 	cursor, err := repo.collection.Find(ctx, filter, findOpts)
 	if err != nil {
@@ -327,55 +253,19 @@ func (repo *RuleRepository) Get(ctx context.Context, orgID, eventType string) (d
 }
 
 func (repo *RuleRepository) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Rule], error) {
-	if opts.OrgID == "" {
-		return domain.ListResult[domain.Rule]{}, errors.New("orgID is required")
-	}
+	filter := buildBsonFilter(opts)
+	page, pageSize := pageOrDefaultParam(opts)
 
-	// Build filter
-	filter := bson.M{"orgId": opts.OrgID}
-
-	// Set default pagination if not provided
-	page := opts.Pagination.Page
-	if page < 1 {
-		page = 1
-	}
-	pageSize := opts.Pagination.PageSize
-	if pageSize < 1 {
-		pageSize = 20 // default page size
-	}
-	if pageSize > 100 {
-		pageSize = 100 // max page size
-	}
-
-	// Count total documents
 	totalCount, err := repo.collection.CountDocuments(ctx, filter)
 	if err != nil {
 		return domain.ListResult[domain.Rule]{}, fmt.Errorf("mongo: count: %w", err)
 	}
 
-	// Calculate skip
-	skip := int64((page - 1) * pageSize)
-
-	// Find with pagination
+	skip := int64(page * pageSize)
 	findOpts := options.Find().
 		SetSkip(skip).
 		SetLimit(int64(pageSize))
-
-	// Apply sorting if specified
-	if len(opts.SortBy) > 0 {
-		sortDoc := bson.D{}
-		for _, sort := range opts.SortBy {
-			order := 1 // ascending
-			if sort.Order == domain.SortDesc {
-				order = -1 // descending
-			}
-			sortDoc = append(sortDoc, bson.E{Key: sort.Field, Value: order})
-		}
-		findOpts.SetSort(sortDoc)
-	} else {
-		// Default sort by createdAt descending (newest first)
-		findOpts.SetSort(bson.D{{Key: "createdAt", Value: -1}})
-	}
+	findOpts.SetSort(buildBsonSort(opts, map[string]int{"createdAt": -1}))
 
 	cursor, err := repo.collection.Find(ctx, filter, findOpts)
 	if err != nil {
@@ -390,7 +280,6 @@ func (repo *RuleRepository) List(ctx context.Context, opts domain.ListOptions) (
 
 	// Calculate total pages
 	totalPages := int(math.Ceil(float64(totalCount) / float64(pageSize)))
-
 	return domain.ListResult[domain.Rule]{
 		Items: rules,
 		Pagination: domain.PaginationResult{
@@ -414,3 +303,61 @@ func (repo *RuleRepository) Delete(ctx context.Context, orgID, eventType string)
 	return nil
 }
 
+func buildBsonFilter(opts domain.ListOptions) bson.M {
+	filter := bson.M{}
+	for key, value := range opts.Filter {
+		if value != "" {
+			filter[key] = value
+		}
+	}
+
+	return filter
+}
+
+func buildBsonSort(opts domain.ListOptions, defaultSort map[string]int) bson.D {
+	sortMap := make(map[string]int)
+	for k, v := range defaultSort {
+		sortMap[k] = v
+	}
+
+	for _, s := range opts.SortBy {
+		order := 1
+		if s.Order == domain.SortDesc {
+			order = -1
+		}
+		sortMap[s.Field] = order
+	}
+
+	// Build bson.D in correct order:
+	// 1. User-specified fields (in order provided)
+	finalSort := bson.D{}
+	used := map[string]bool{}
+	for _, s := range opts.SortBy {
+		finalSort = append(finalSort, bson.E{
+			Key:   s.Field,
+			Value: sortMap[s.Field],
+		})
+		used[s.Field] = true
+	}
+
+	// 2. Default fields not specified by user
+	for k, v := range defaultSort {
+		if !used[k] {
+			finalSort = append(finalSort, bson.E{Key: k, Value: v})
+		}
+	}
+
+	return finalSort
+}
+
+func pageOrDefaultParam(opts domain.ListOptions) (page int, pageSize int) {
+	// Set default pagination if not provided
+	page = max(1, opts.Pagination.Page)
+	pageSize = opts.Pagination.PageSize
+	if pageSize < 1 {
+		pageSize = 20 // default page size
+	}
+
+	pageSize = min(100, pageSize)
+	return
+}

@@ -1,4 +1,4 @@
-package utils
+package httpx
 
 import (
 	"encoding/json"
@@ -72,5 +72,3 @@ func mergeMaps(target, patch map[string]interface{}) {
 		target[key] = patchValue
 	}
 }
-
-

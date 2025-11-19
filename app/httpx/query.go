@@ -1,21 +1,17 @@
-package utils
+package httpx
 
 import (
 	"strconv"
 	"strings"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/notifyx/core/domain"
 )
 
-// QueryParser provides methods to parse query parameters
-type QueryParser interface {
-	Query(key string) string
-}
-
 // ParseListOptions parses query parameters for pagination, sorting, and filtering
-func ParseListOptions(parser QueryParser, orgID string) domain.ListOptions {
+func ParseListOptions(parser *fiber.Ctx, orgID string) domain.ListOptions {
 	opts := domain.ListOptions{
-		OrgID: orgID,
+		Filter: map[string]string{"orgId": orgID},
 	}
 
 	// Parse pagination
@@ -47,21 +43,14 @@ func ParseListOptions(parser QueryParser, orgID string) domain.ListOptions {
 	return opts
 }
 
-// ParseListOptionsWithGroup parses query parameters including group filter
-func ParseListOptionsWithGroup(parser QueryParser, orgID string) domain.ListOptions {
-	opts := ParseListOptions(parser, orgID)
-	opts.GroupID = parser.Query("groupId")
-	return opts
-}
-
 // parseSortBy parses sort query parameter
 // Format: "field1:asc,field2:desc" or "field1" (defaults to asc)
-func parseSortBy(sortByStr string) []domain.SortOption {
+func parseSortBy(sortByStr string) []domain.SortParams {
 	if sortByStr == "" {
 		return nil
 	}
 
-	var sortOptions []domain.SortOption
+	var sortOptions []domain.SortParams
 	parts := strings.Split(sortByStr, ",")
 
 	for _, part := range parts {
@@ -85,7 +74,7 @@ func parseSortBy(sortByStr string) []domain.SortOption {
 			}
 		}
 
-		sortOptions = append(sortOptions, domain.SortOption{
+		sortOptions = append(sortOptions, domain.SortParams{
 			Field: field,
 			Order: order,
 		})
@@ -93,4 +82,3 @@ func parseSortBy(sortByStr string) []domain.SortOption {
 
 	return sortOptions
 }
-

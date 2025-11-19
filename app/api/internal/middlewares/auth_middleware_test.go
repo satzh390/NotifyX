@@ -94,4 +94,3 @@ func TestOrgIDFromCtx(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
 }
-
