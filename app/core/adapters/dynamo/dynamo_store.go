@@ -65,13 +65,12 @@ func (repo *RuleRepository) Delete(ctx context.Context, orgID, eventType string)
 }
 
 // NewStoreSet returns storage interfaces backed by DynamoDB-specific repositories.
-// Note: Templates are always stored in S3, not DynamoDB.
 func NewStoreSet() storage.Stores {
 	return storage.Stores{
 		Subscribers: &SubscriberRepository{},
 		Groups:      &GroupRepository{},
 		Rules:       &RuleRepository{},
-		// Templates are stored in S3, not DynamoDB
+		// Templates: not implemented for DynamoDB
 	}
 }
 

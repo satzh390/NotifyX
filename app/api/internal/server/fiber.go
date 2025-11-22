@@ -18,10 +18,10 @@ type Server struct {
 	cfg       Config
 	app       *fiber.App
 	stores    storage.Stores
-	validator auth.Validator
+	validator auth.AuthValidator
 }
 
-func New(cfg Config, stores storage.Stores, validator auth.Validator) *Server {
+func New(cfg Config, stores storage.Stores, validator auth.AuthValidator) *Server {
 	app := fiber.New()
 	srv := &Server{
 		cfg:       cfg,

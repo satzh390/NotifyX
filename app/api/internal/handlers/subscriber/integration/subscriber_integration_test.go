@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package handlers
+package integration
 
 import (
 	"bytes"
@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/notifyx/core/domain"
 	mongoadapter "github.com/notifyx/core/adapters/mongo"
+	"github.com/notifyx/core/domain"
 )
 
 func TestIntegration_Subscriber_Create(t *testing.T) {
@@ -25,8 +25,8 @@ func TestIntegration_Subscriber_Create(t *testing.T) {
 	createBody := map[string]interface{}{
 		"email": "integration@example.com",
 		"preferences": map[string]interface{}{
-			"channels": map[string]bool{"email": true},
-			"language": "en",
+			"channels":    map[string]bool{"email": true},
+			"language":    "en",
 			"allowedDays": []string{"monday", "tuesday"},
 			"notificationWindow": map[string]string{
 				"start": "09:00",
@@ -385,4 +385,3 @@ func TestIntegration_Subscriber_List_WithSorting(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
 }
-

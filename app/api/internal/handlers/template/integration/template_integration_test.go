@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package handlers
+package integration
 
 import (
 	"bytes"
@@ -12,46 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/notifyx/core/domain"
-	s3adapter "github.com/notifyx/core/adapters/s3"
 )
-
-func setupTemplateIntegrationApp(t *testing.T) (*fiber.App, func()) {
-	// For templates, we need S3. In integration tests, we'll use LocalStack
-	ctx := context.Background()
-	
-	// Note: This requires LocalStack to be running with S3
-	// For now, we'll skip if S3 is not available
-	templateRepo, err := s3adapter.NewTemplateRepository(ctx, s3adapter.Options{
-		Bucket:      "notifyx-templates",
-		Region:      "us-east-1",
-		Endpoint:    "http://localhost:4566", // LocalStack endpoint
-		KeyPrefix:   "",
-		AccessKeyID: "test",
-		SecretKey:   "test",
-	})
-	if err != nil {
-		t.Skipf("S3 not available for integration test: %v", err)
-	}
-
-	app := fiber.New()
-	api := app.Group("/api/v1")
-	api.Use(func(c *fiber.Ctx) error {
-		c.Locals("orgId", "test-org-integration")
-		return c.Next()
-	})
-
-	templateHandler := NewTemplateHandler(templateRepo)
-	templates := api.Group("/templates")
-	templates.Post("", templateHandler.Create)
-	templates.Get("/:id", templateHandler.Get)
-	templates.Put("/:id", templateHandler.Update)
-	templates.Delete("/:id", templateHandler.Delete)
-
-	return app, func() {}
-}
 
 func TestIntegration_Template_Create(t *testing.T) {
 	app, cleanup := setupTemplateIntegrationApp(t)
@@ -60,8 +23,10 @@ func TestIntegration_Template_Create(t *testing.T) {
 	createBody := map[string]interface{}{
 		"name":    "Order Confirmation",
 		"channel": "email",
-		"body":    "Your order has been confirmed",
-		"subject": "Order Confirmation",
+		"content": map[string]interface{}{
+			"body":    "Your order has been confirmed",
+			"subject": "Order Confirmation",
+		},
 	}
 	bodyJSON, _ := json.Marshal(createBody)
 
@@ -94,30 +59,22 @@ func TestIntegration_Template_Get(t *testing.T) {
 	defer cleanup()
 
 	// Create a template first
+	stores, _, _ := handlers.SetupIntegrationTest(t)
 	ctx := context.Background()
-	templateRepo, err := s3adapter.NewTemplateRepository(ctx, s3adapter.Options{
-		Bucket:      "notifyx-templates",
-		Region:      "us-east-1",
-		Endpoint:    "http://localhost:4566",
-		KeyPrefix:   "",
-		AccessKeyID: "test",
-		SecretKey:   "test",
-	})
-	if err != nil {
-		t.Skipf("S3 not available: %v", err)
-	}
 
 	templateID := uuid.NewString()
 	template := domain.Template{
-		ID:        templateID,
-		OrgID:     "test-org-integration",
-		Name:      "Test Template",
-		Channel:   domain.ChannelEmail,
-		Body:      "Test body",
+		ID:      templateID,
+		OrgID:   "test-org-integration",
+		Name:    "Test Template",
+		Channel: domain.ChannelEmail,
+		Content: domain.TemplateContent{
+			Body: "Test body",
+		},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	if err := templateRepo.Put(ctx, template); err != nil {
+	if err := stores.Templates.Put(ctx, template); err != nil {
 		t.Fatalf("Failed to create template: %v", err)
 	}
 
@@ -147,37 +104,31 @@ func TestIntegration_Template_Update(t *testing.T) {
 	defer cleanup()
 
 	// Create a template first
+	stores, _, _ := handlers.SetupIntegrationTest(t)
 	ctx := context.Background()
-	templateRepo, err := s3adapter.NewTemplateRepository(ctx, s3adapter.Options{
-		Bucket:      "notifyx-templates",
-		Region:      "us-east-1",
-		Endpoint:    "http://localhost:4566",
-		KeyPrefix:   "",
-		AccessKeyID: "test",
-		SecretKey:   "test",
-	})
-	if err != nil {
-		t.Skipf("S3 not available: %v", err)
-	}
 
 	templateID := uuid.NewString()
 	template := domain.Template{
-		ID:        templateID,
-		OrgID:     "test-org-integration",
-		Name:      "Old Name",
-		Channel:   domain.ChannelEmail,
-		Body:      "Old body",
+		ID:      templateID,
+		OrgID:   "test-org-integration",
+		Name:    "Old Name",
+		Channel: domain.ChannelEmail,
+		Content: domain.TemplateContent{
+			Body: "Old body",
+		},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	if err := templateRepo.Put(ctx, template); err != nil {
+	if err := stores.Templates.Put(ctx, template); err != nil {
 		t.Fatalf("Failed to create template: %v", err)
 	}
 
 	// Update the template
 	updateBody := map[string]interface{}{
 		"name": "New Name",
-		"body": "New body",
+		"content": map[string]interface{}{
+			"body": "New body",
+		},
 	}
 	updateJSON, _ := json.Marshal(updateBody)
 
@@ -207,30 +158,22 @@ func TestIntegration_Template_Delete(t *testing.T) {
 	defer cleanup()
 
 	// Create a template first
+	stores, _, _ := handlers.SetupIntegrationTest(t)
 	ctx := context.Background()
-	templateRepo, err := s3adapter.NewTemplateRepository(ctx, s3adapter.Options{
-		Bucket:      "notifyx-templates",
-		Region:      "us-east-1",
-		Endpoint:    "http://localhost:4566",
-		KeyPrefix:   "",
-		AccessKeyID: "test",
-		SecretKey:   "test",
-	})
-	if err != nil {
-		t.Skipf("S3 not available: %v", err)
-	}
 
 	templateID := uuid.NewString()
 	template := domain.Template{
-		ID:        templateID,
-		OrgID:     "test-org-integration",
-		Name:      "Test Template",
-		Channel:   domain.ChannelEmail,
-		Body:      "Test body",
+		ID:      templateID,
+		OrgID:   "test-org-integration",
+		Name:    "Test Template",
+		Channel: domain.ChannelEmail,
+		Content: domain.TemplateContent{
+			Body: "Test body",
+		},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	if err := templateRepo.Put(ctx, template); err != nil {
+	if err := stores.Templates.Put(ctx, template); err != nil {
 		t.Fatalf("Failed to create template: %v", err)
 	}
 
@@ -246,9 +189,8 @@ func TestIntegration_Template_Delete(t *testing.T) {
 	}
 
 	// Verify deleted
-	_, err = templateRepo.Get(ctx, "test-org-integration", templateID)
+	_, err = stores.Templates.Get(ctx, "test-org-integration", templateID)
 	if err == nil {
 		t.Error("Expected template to be deleted")
 	}
 }
-

@@ -1,8 +1,7 @@
-package handlers
+package group
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -11,11 +10,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/notifyx/core/domain"
+	"github.com/notifyx/core/storage"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func setupGroupTestApp() (*fiber.App, *mockGroupStore) {
+func setupGroupTestApp() (*fiber.App, *MockGroupStore) {
 	app := fiber.New()
-	store := &mockGroupStore{groups: make(map[string]domain.Group)}
+	store := new(MockGroupStore)
 	handler := NewGroupHandler(store)
 
 	api := app.Group("/api/v1")
@@ -35,7 +37,12 @@ func setupGroupTestApp() (*fiber.App, *mockGroupStore) {
 }
 
 func TestGroupHandler_Create(t *testing.T) {
-	app, _ := setupGroupTestApp()
+	app, store := setupGroupTestApp()
+
+	// Mock Put to succeed
+	store.On("Put", mock.Anything, mock.MatchedBy(func(g domain.Group) bool {
+		return g.Name == "Test Group" && g.OrgID == "test-org"
+	})).Return(nil).Once()
 
 	body := map[string]interface{}{
 		"name":        "Test Group",
@@ -48,86 +55,76 @@ func TestGroupHandler_Create(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusCreated {
-		t.Errorf("Expected status 201, got %d", resp.StatusCode)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
 	var group domain.Group
-	if err := json.NewDecoder(resp.Body).Decode(&group); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
+	err = json.NewDecoder(resp.Body).Decode(&group)
+	assert.NoError(t, err)
+	assert.Equal(t, "Test Group", group.Name)
+	assert.Equal(t, "test-org", group.OrgID)
 
-	if group.Name != "Test Group" {
-		t.Errorf("Expected name Test Group, got %s", group.Name)
-	}
-	if group.OrgID != "test-org" {
-		t.Errorf("Expected orgID test-org, got %s", group.OrgID)
-	}
+	store.AssertExpectations(t)
 }
 
 func TestGroupHandler_Get(t *testing.T) {
 	app, store := setupGroupTestApp()
 
 	groupID := uuid.NewString()
-	store.Put(context.Background(), domain.Group{
+	expectedGroup := domain.Group{
 		ID:          groupID,
 		OrgID:       "test-org",
 		Name:        "Test Group",
 		Description: "Test Description",
-	})
+	}
+
+	store.On("Get", mock.Anything, "test-org", groupID).Return(expectedGroup, nil).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/"+groupID, nil)
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var group domain.Group
-	if err := json.NewDecoder(resp.Body).Decode(&group); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
+	err = json.NewDecoder(resp.Body).Decode(&group)
+	assert.NoError(t, err)
+	assert.Equal(t, groupID, group.ID)
+	assert.Equal(t, "Test Group", group.Name)
 
-	if group.ID != groupID {
-		t.Errorf("Expected ID %s, got %s", groupID, group.ID)
-	}
-	if group.Name != "Test Group" {
-		t.Errorf("Expected name Test Group, got %s", group.Name)
-	}
+	store.AssertExpectations(t)
 }
 
 func TestGroupHandler_Get_NotFound(t *testing.T) {
-	app, _ := setupGroupTestApp()
+	app, store := setupGroupTestApp()
+
+	store.On("Get", mock.Anything, "test-org", "non-existent").Return(domain.Group{}, storage.ErrNotFound).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/non-existent", nil)
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
-	if resp.StatusCode != http.StatusNotFound {
-		t.Errorf("Expected status 404, got %d", resp.StatusCode)
-	}
+	store.AssertExpectations(t)
 }
 
 func TestGroupHandler_Update(t *testing.T) {
 	app, store := setupGroupTestApp()
 
 	groupID := uuid.NewString()
-	store.Put(context.Background(), domain.Group{
+	existingGroup := domain.Group{
 		ID:    groupID,
 		OrgID: "test-org",
 		Name:  "Old Name",
-	})
+	}
+
+	// Mock Get to return existing group
+	store.On("Get", mock.Anything, "test-org", groupID).Return(existingGroup, nil).Once()
+	// Mock Put to update the group
+	store.On("Put", mock.Anything, mock.MatchedBy(func(g domain.Group) bool {
+		return g.ID == groupID && g.Name == "New Name"
+	})).Return(nil).Once()
 
 	patch := map[string]interface{}{
 		"name": "New Name",
@@ -138,126 +135,112 @@ func TestGroupHandler_Update(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var updated domain.Group
-	if err := json.NewDecoder(resp.Body).Decode(&updated); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
+	err = json.NewDecoder(resp.Body).Decode(&updated)
+	assert.NoError(t, err)
+	assert.Equal(t, "New Name", updated.Name)
 
-	if updated.Name != "New Name" {
-		t.Errorf("Expected name New Name, got %s", updated.Name)
-	}
+	store.AssertExpectations(t)
 }
 
 func TestGroupHandler_Delete(t *testing.T) {
 	app, store := setupGroupTestApp()
 
 	groupID := uuid.NewString()
-	store.Put(context.Background(), domain.Group{
+	existingGroup := domain.Group{
 		ID:    groupID,
 		OrgID: "test-org",
 		Name:  "Test Group",
-	})
+	}
+
+	// Mock Get to return existing group
+	store.On("Get", mock.Anything, "test-org", groupID).Return(existingGroup, nil).Once()
+	// Mock Delete to succeed
+	store.On("Delete", mock.Anything, "test-org", groupID).Return(nil).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/"+groupID, nil)
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 
-	if resp.StatusCode != http.StatusNoContent {
-		t.Errorf("Expected status 204, got %d", resp.StatusCode)
-	}
-
-	// Verify deleted
-	_, err = store.Get(context.Background(), "test-org", groupID)
-	if err == nil {
-		t.Error("Expected group to be deleted")
-	}
+	store.AssertExpectations(t)
 }
 
 func TestGroupHandler_Delete_NotFound(t *testing.T) {
-	app, _ := setupGroupTestApp()
+	app, store := setupGroupTestApp()
+
+	store.On("Get", mock.Anything, "test-org", "non-existent").Return(domain.Group{}, storage.ErrNotFound).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/non-existent", nil)
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
-	if resp.StatusCode != http.StatusNotFound {
-		t.Errorf("Expected status 404, got %d", resp.StatusCode)
-	}
+	store.AssertExpectations(t)
 }
 
 func TestGroupHandler_List(t *testing.T) {
 	app, store := setupGroupTestApp()
 
-	// Add some groups
-	store.Put(context.Background(), domain.Group{
-		ID:    "group-1",
-		OrgID: "test-org",
-		Name:  "Group 1",
-	})
-	store.Put(context.Background(), domain.Group{
-		ID:    "group-2",
-		OrgID: "test-org",
-		Name:  "Group 2",
-	})
+	expectedResult := domain.ListResult[domain.Group]{
+		Items: []domain.Group{
+			{ID: "group-1", OrgID: "test-org", Name: "Group 1"},
+			{ID: "group-2", OrgID: "test-org", Name: "Group 2"},
+		},
+		Pagination: domain.PaginationResult{
+			Page:       1,
+			PageSize:   20,
+			TotalCount: 2,
+			TotalPages: 1,
+		},
+	}
+
+	store.On("List", mock.Anything, mock.MatchedBy(func(opts domain.ListOptions) bool {
+		return opts.Pagination.Page == 1 && opts.Pagination.PageSize == 20
+	})).Return(expectedResult, nil).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?page=1&pageSize=20", nil)
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var result domain.ListResult[domain.Group]
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.GreaterOrEqual(t, result.Pagination.TotalCount, int64(2))
 
-	if result.Pagination.TotalCount < 2 {
-		t.Errorf("Expected at least 2 groups, got %d", result.Pagination.TotalCount)
-	}
+	store.AssertExpectations(t)
 }
 
 func TestGroupHandler_List_WithSorting(t *testing.T) {
 	app, store := setupGroupTestApp()
 
-	store.Put(context.Background(), domain.Group{
-		ID:   "group-1",
-		OrgID: "test-org",
-		Name: "A Group",
-	})
-	store.Put(context.Background(), domain.Group{
-		ID:   "group-2",
-		OrgID: "test-org",
-		Name: "B Group",
-	})
+	expectedResult := domain.ListResult[domain.Group]{
+		Items: []domain.Group{
+			{ID: "group-1", OrgID: "test-org", Name: "A Group"},
+			{ID: "group-2", OrgID: "test-org", Name: "B Group"},
+		},
+		Pagination: domain.PaginationResult{
+			Page:       1,
+			PageSize:   20,
+			TotalCount: 2,
+			TotalPages: 1,
+		},
+	}
+
+	store.On("List", mock.Anything, mock.Anything).Return(expectedResult, nil).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?sortBy=name:asc", nil)
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
+	store.AssertExpectations(t)
 }
-

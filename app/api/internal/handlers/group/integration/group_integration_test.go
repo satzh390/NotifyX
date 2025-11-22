@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package handlers
+package integration
 
 import (
 	"bytes"
@@ -13,8 +13,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/notifyx/core/domain"
 	mongoadapter "github.com/notifyx/core/adapters/mongo"
+	"github.com/notifyx/core/domain"
 )
 
 func TestIntegration_Group_Create(t *testing.T) {
@@ -276,4 +276,3 @@ func TestIntegration_Group_List_WithSorting(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
 }
-

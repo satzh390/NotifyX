@@ -44,7 +44,7 @@ func NewStoreSet(ctx context.Context, opts Options) (storage.Stores, func(contex
 		Subscribers: &SubscriberRepository{collection: db.Collection(prefix + "subscribers")},
 		Groups:      &GroupRepository{collection: db.Collection(prefix + "groups")},
 		Rules:       &RuleRepository{collection: db.Collection(prefix + "rules")},
-		// Templates are stored in S3, not MongoDB
+		Templates:   &TemplateRepository{collection: db.Collection(prefix + "templates")},
 	}
 
 	cleanup := func(ctx context.Context) error {
@@ -59,25 +59,23 @@ type SubscriberRepository struct {
 }
 
 func (repo *SubscriberRepository) Put(ctx context.Context, subscriber domain.Subscriber) error {
-	// Set createdAt if it's zero (new record)
-	if subscriber.CreatedAt.IsZero() {
-		// Check if document exists
-		existing, err := repo.Get(ctx, subscriber.OrgID, subscriber.ID)
-		if err != nil && err != storage.ErrNotFound {
-			return err
-		}
-		if err == storage.ErrNotFound {
-			// New record, set createdAt
-			subscriber.CreatedAt = time.Now()
-		} else {
-			// Existing record, preserve original createdAt
-			subscriber.CreatedAt = existing.CreatedAt
-		}
+	filter := bson.M{"orgId": subscriber.OrgID, "subscriberId": subscriber.ID}
+	updateMap, err := BuildUpdateMap(subscriber)
+	if err != nil {
+		return err
 	}
 
-	filter := bson.M{"orgId": subscriber.OrgID, "subscriberId": subscriber.ID}
-	opts := options.Replace().SetUpsert(true)
-	_, err := repo.collection.ReplaceOne(ctx, filter, subscriber, opts)
+	updateMap["updatedAt"] = time.Now()
+	update := bson.M{
+		"$set": updateMap,
+		"$setOnInsert": bson.M{
+			"createdAt":    time.Now(),
+			"orgId":        subscriber.OrgID,
+			"subscriberId": subscriber.ID,
+		},
+	}
+	opts := options.Update().SetUpsert(true)
+	_, err = repo.collection.UpdateOne(ctx, filter, update, opts)
 	return err
 }
 
@@ -94,7 +92,6 @@ func (repo *SubscriberRepository) Get(ctx context.Context, orgID, subscriberID s
 func (repo *SubscriberRepository) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Subscriber], error) {
 	filter := buildBsonFilter(opts)
 	page, pageSize := pageOrDefaultParam(opts)
-
 	totalCount, err := repo.collection.CountDocuments(ctx, filter)
 	if err != nil {
 		return domain.ListResult[domain.Subscriber]{}, fmt.Errorf("mongo: count: %w", err)
@@ -105,13 +102,12 @@ func (repo *SubscriberRepository) List(ctx context.Context, opts domain.ListOpti
 		SetSkip(skip).
 		SetLimit(int64(pageSize))
 	findOpts.SetSort(buildBsonSort(opts, map[string]int{"createdAt": -1}))
-
 	cursor, err := repo.collection.Find(ctx, filter, findOpts)
 	if err != nil {
 		return domain.ListResult[domain.Subscriber]{}, fmt.Errorf("mongo: find: %w", err)
 	}
-	defer cursor.Close(ctx)
 
+	defer cursor.Close(ctx)
 	var subscribers []domain.Subscriber
 	if err := cursor.All(ctx, &subscribers); err != nil {
 		return domain.ListResult[domain.Subscriber]{}, fmt.Errorf("mongo: decode: %w", err)
@@ -136,6 +132,7 @@ func (repo *SubscriberRepository) Delete(ctx context.Context, orgID, subscriberI
 	if err != nil {
 		return err
 	}
+
 	if result.DeletedCount == 0 {
 		return storage.ErrNotFound
 	}
@@ -148,8 +145,13 @@ type GroupRepository struct {
 
 func (repo *GroupRepository) Put(ctx context.Context, group domain.Group) error {
 	filter := bson.M{"orgId": group.OrgID, "groupId": group.ID}
-	opts := options.Replace().SetUpsert(true)
-	_, err := repo.collection.ReplaceOne(ctx, filter, group, opts)
+	updateMap, err := BuildUpdateMap(group)
+	if err != nil {
+		return err
+	}
+
+	opts := options.Update().SetUpsert(true)
+	_, err = repo.collection.UpdateOne(ctx, filter, updateMap, opts)
 	return err
 }
 
@@ -160,13 +162,13 @@ func (repo *GroupRepository) Get(ctx context.Context, orgID, groupID string) (do
 	if errors.Is(err, mongoDriver.ErrNoDocuments) {
 		return domain.Group{}, storage.ErrNotFound
 	}
+
 	return group, err
 }
 
 func (repo *GroupRepository) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Group], error) {
 	filter := buildBsonFilter(opts)
 	page, pageSize := pageOrDefaultParam(opts)
-
 	totalCount, err := repo.collection.CountDocuments(ctx, filter)
 	if err != nil {
 		return domain.ListResult[domain.Group]{}, fmt.Errorf("mongo: count: %w", err)
@@ -177,13 +179,12 @@ func (repo *GroupRepository) List(ctx context.Context, opts domain.ListOptions) 
 		SetSkip(skip).
 		SetLimit(int64(pageSize))
 	findOpts.SetSort(buildBsonSort(opts, map[string]int{"createdAt": -1}))
-
 	cursor, err := repo.collection.Find(ctx, filter, findOpts)
 	if err != nil {
 		return domain.ListResult[domain.Group]{}, fmt.Errorf("mongo: find: %w", err)
 	}
-	defer cursor.Close(ctx)
 
+	defer cursor.Close(ctx)
 	var groups []domain.Group
 	if err := cursor.All(ctx, &groups); err != nil {
 		return domain.ListResult[domain.Group]{}, fmt.Errorf("mongo: decode: %w", err)
@@ -191,7 +192,6 @@ func (repo *GroupRepository) List(ctx context.Context, opts domain.ListOptions) 
 
 	// Calculate total pages
 	totalPages := int(math.Ceil(float64(totalCount) / float64(pageSize)))
-
 	return domain.ListResult[domain.Group]{
 		Items: groups,
 		Pagination: domain.PaginationResult{
@@ -209,9 +209,11 @@ func (repo *GroupRepository) Delete(ctx context.Context, orgID, groupID string) 
 	if err != nil {
 		return err
 	}
+
 	if result.DeletedCount == 0 {
 		return storage.ErrNotFound
 	}
+
 	return nil
 }
 
@@ -220,25 +222,23 @@ type RuleRepository struct {
 }
 
 func (repo *RuleRepository) Put(ctx context.Context, rule domain.Rule) error {
-	// Set createdAt if it's zero (new record)
-	if rule.CreatedAt.IsZero() {
-		// Check if document exists
-		existing, err := repo.Get(ctx, rule.OrgID, rule.EventType)
-		if err != nil && err != storage.ErrNotFound {
-			return err
-		}
-		if err == storage.ErrNotFound {
-			// New record, set createdAt
-			rule.CreatedAt = time.Now()
-		} else {
-			// Existing record, preserve original createdAt
-			rule.CreatedAt = existing.CreatedAt
-		}
+	filter := bson.M{"orgId": rule.OrgID, "eventType": rule.EventType}
+	updateMap, err := BuildUpdateMap(rule)
+	if err != nil {
+		return err
 	}
 
-	filter := bson.M{"orgId": rule.OrgID, "eventType": rule.EventType}
-	opts := options.Replace().SetUpsert(true)
-	_, err := repo.collection.ReplaceOne(ctx, filter, rule, opts)
+	updateMap["updatedAt"] = time.Now()
+	update := bson.M{
+		"$set": updateMap,
+		"$setOnInsert": bson.M{
+			"createdAt": time.Now(),
+			"orgId":     rule.OrgID,
+			"eventType": rule.EventType,
+		},
+	}
+	opts := options.Update().SetUpsert(true)
+	_, err = repo.collection.UpdateOne(ctx, filter, update, opts)
 	return err
 }
 
@@ -249,13 +249,13 @@ func (repo *RuleRepository) Get(ctx context.Context, orgID, eventType string) (d
 	if errors.Is(err, mongoDriver.ErrNoDocuments) {
 		return domain.Rule{}, storage.ErrNotFound
 	}
+
 	return rule, err
 }
 
 func (repo *RuleRepository) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Rule], error) {
 	filter := buildBsonFilter(opts)
 	page, pageSize := pageOrDefaultParam(opts)
-
 	totalCount, err := repo.collection.CountDocuments(ctx, filter)
 	if err != nil {
 		return domain.ListResult[domain.Rule]{}, fmt.Errorf("mongo: count: %w", err)
@@ -266,13 +266,12 @@ func (repo *RuleRepository) List(ctx context.Context, opts domain.ListOptions) (
 		SetSkip(skip).
 		SetLimit(int64(pageSize))
 	findOpts.SetSort(buildBsonSort(opts, map[string]int{"createdAt": -1}))
-
 	cursor, err := repo.collection.Find(ctx, filter, findOpts)
 	if err != nil {
 		return domain.ListResult[domain.Rule]{}, fmt.Errorf("mongo: find: %w", err)
 	}
-	defer cursor.Close(ctx)
 
+	defer cursor.Close(ctx)
 	var rules []domain.Rule
 	if err := cursor.All(ctx, &rules); err != nil {
 		return domain.ListResult[domain.Rule]{}, fmt.Errorf("mongo: decode: %w", err)
@@ -297,6 +296,7 @@ func (repo *RuleRepository) Delete(ctx context.Context, orgID, eventType string)
 	if err != nil {
 		return err
 	}
+
 	if result.DeletedCount == 0 {
 		return storage.ErrNotFound
 	}
@@ -360,4 +360,98 @@ func pageOrDefaultParam(opts domain.ListOptions) (page int, pageSize int) {
 
 	pageSize = min(100, pageSize)
 	return
+}
+
+type TemplateRepository struct {
+	collection *mongoDriver.Collection
+}
+
+func (repo *TemplateRepository) Put(ctx context.Context, template domain.Template) error {
+	// Template ID is unique per org, channel is a property of the template
+	filter := bson.M{
+		"orgId": template.OrgID,
+		"id":    template.ID,
+	}
+	updateMap, err := BuildUpdateMap(template)
+	if err != nil {
+		return err
+	}
+
+	updateMap["updatedAt"] = time.Now()
+	update := bson.M{
+		"$set": updateMap,
+		"$setOnInsert": bson.M{
+			"createdAt": time.Now(),
+			"orgId":     template.OrgID,
+			"id":        template.ID,
+			"channel":   template.Channel,
+		},
+	}
+	opts := options.Update().SetUpsert(true)
+	_, err = repo.collection.UpdateOne(ctx, filter, update, opts)
+	return err
+}
+
+func (repo *TemplateRepository) Get(ctx context.Context, orgID, templateID string) (domain.Template, error) {
+	filter := bson.M{
+		"orgId": orgID,
+		"id":    templateID,
+	}
+	var template domain.Template
+	err := repo.collection.FindOne(ctx, filter).Decode(&template)
+	if errors.Is(err, mongoDriver.ErrNoDocuments) {
+		return domain.Template{}, storage.ErrNotFound
+	}
+
+	if err != nil {
+		return domain.Template{}, err
+	}
+
+	return template, nil
+}
+
+func (repo *TemplateRepository) GetByLanguage(ctx context.Context, orgID, templateID, language string) (domain.Template, error) {
+	template, err := repo.Get(ctx, orgID, templateID)
+	if err != nil {
+		return domain.Template{}, err
+	}
+
+	// If language is specified and translation exists, merge it into content
+	if language != "" && template.Translations != nil {
+		if translatedContent, ok := template.Translations[language]; ok {
+			// Merge translated content into the main content
+			// Translated content takes precedence
+			if translatedContent.Body != "" {
+				template.Content.Body = translatedContent.Body
+			}
+			if translatedContent.Subject != "" {
+				template.Content.Subject = translatedContent.Subject
+			}
+			if translatedContent.Title != "" {
+				template.Content.Title = translatedContent.Title
+			}
+			if translatedContent.Payload != nil {
+				template.Content.Payload = translatedContent.Payload
+			}
+		}
+	}
+
+	return template, nil
+}
+
+func (repo *TemplateRepository) Delete(ctx context.Context, orgID, templateID string) error {
+	// Delete all variants (all channels and languages)
+	filter := bson.M{
+		"orgId": orgID,
+		"id":    templateID,
+	}
+	result, err := repo.collection.DeleteMany(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	if result.DeletedCount == 0 {
+		return storage.ErrNotFound
+	}
+	return nil
 }

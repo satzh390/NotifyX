@@ -22,14 +22,6 @@ type Config struct {
 			URI      string `mapstructure:"uri"`
 			Database string `mapstructure:"database"`
 		} `mapstructure:"mongo"`
-		S3 struct {
-			Bucket      string `mapstructure:"bucket"`
-			Region      string `mapstructure:"region"`
-			Endpoint    string `mapstructure:"endpoint"`
-			KeyPrefix   string `mapstructure:"keyPrefix"`
-			AccessKeyID string `mapstructure:"accessKeyId"`
-			SecretKey   string `mapstructure:"secretKey"`
-		} `mapstructure:"s3"`
 	} `mapstructure:"storage"`
 }
 
@@ -55,12 +47,6 @@ func Load(path string) (Config, error) {
 	}
 	if config.Storage.Mongo.URI == "" || config.Storage.Mongo.Database == "" {
 		return Config{}, errors.New("config: storage.mongo uri and database are required")
-	}
-	if config.Storage.S3.Bucket == "" {
-		return Config{}, errors.New("config: storage.s3 bucket is required")
-	}
-	if config.Storage.S3.Region == "" {
-		config.Storage.S3.Region = "us-east-1"
 	}
 
 	return config, nil

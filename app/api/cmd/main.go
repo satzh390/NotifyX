@@ -9,7 +9,6 @@ import (
 	"github.com/notifyx/api/internal/auth"
 	"github.com/notifyx/api/internal/server"
 	mongoadapter "github.com/notifyx/core/adapters/mongo"
-	s3adapter "github.com/notifyx/core/adapters/s3"
 )
 
 func main() {
@@ -37,20 +36,6 @@ func main() {
 			_ = cleanup(context.Background())
 		}
 	}()
-
-	// Templates are always stored in S3
-	templateRepo, err := s3adapter.NewTemplateRepository(ctx, s3adapter.Options{
-		Bucket:      cfg.Storage.S3.Bucket,
-		Region:      cfg.Storage.S3.Region,
-		Endpoint:    cfg.Storage.S3.Endpoint,
-		KeyPrefix:   cfg.Storage.S3.KeyPrefix,
-		AccessKeyID: cfg.Storage.S3.AccessKeyID,
-		SecretKey:   cfg.Storage.S3.SecretKey,
-	})
-	if err != nil {
-		log.Fatalf("failed to initialize s3 template store: %v", err)
-	}
-	stores.Templates = templateRepo
 
 	validator, err := auth.NewJWKSValidator(ctx, cfg.OAuth.Issuer, cfg.OAuth.JWKS, cfg.OAuth.Audiences)
 	if err != nil {

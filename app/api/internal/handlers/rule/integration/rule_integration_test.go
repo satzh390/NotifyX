@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package handlers
+package integration
 
 import (
 	"bytes"
@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/notifyx/core/domain"
 	mongoadapter "github.com/notifyx/core/adapters/mongo"
+	"github.com/notifyx/core/domain"
 )
 
 func TestIntegration_Rule_Create(t *testing.T) {
@@ -273,4 +273,3 @@ func TestIntegration_Rule_List_WithSorting(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
 }
-

@@ -1,4 +1,4 @@
-package handlers
+package subscriber
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/notifyx/api/internal/middlewares"
 	"github.com/notifyx/core/domain"
 	"github.com/notifyx/core/storage"
-	"github.com/notifyx/core/utils"
+	"github.com/notifyx/httpx"
 )
 
 type SubscriberHandler struct {
@@ -119,7 +119,7 @@ func (handler *SubscriberHandler) Update(fiberCtx *fiber.Ctx) error {
 
 	// Apply merge patch
 	patchData := fiberCtx.Body()
-	if err := utils.MergePatch(&existing, patchData); err != nil {
+	if err := httpx.MergePatch(&existing, patchData); err != nil {
 		return fiber.NewError(http.StatusBadRequest, "invalid patch: "+err.Error())
 	}
 
@@ -149,8 +149,7 @@ func (handler *SubscriberHandler) Delete(fiberCtx *fiber.Ctx) error {
 
 func (handler *SubscriberHandler) List(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
-	parser := &fiberQueryParser{ctx: fiberCtx}
-	opts := utils.ParseListOptionsWithGroup(parser, orgID)
+	opts := httpx.ParseListOptions(fiberCtx, orgID)
 
 	result, err := handler.store.List(context.Background(), opts)
 	if err != nil {
@@ -159,13 +158,3 @@ func (handler *SubscriberHandler) List(fiberCtx *fiber.Ctx) error {
 
 	return fiberCtx.JSON(result)
 }
-
-// fiberQueryParser adapts Fiber context to QueryParser interface
-type fiberQueryParser struct {
-	ctx *fiber.Ctx
-}
-
-func (p *fiberQueryParser) Query(key string) string {
-	return p.ctx.Query(key)
-}
-

@@ -20,8 +20,8 @@ const (
 )
 
 type Subscriber struct {
-	ID          string            `json:"subscriberId" bson:"subscriberId"`
-	OrgID       string            `json:"orgId" bson:"orgId"`
+	ID          string            `json:"subscriberId" bson:"subscriberId" immutable:"true"`
+	OrgID       string            `json:"orgId" bson:"orgId" immutable:"true"`
 	Email       string            `json:"email,omitempty" bson:"email,omitempty"`
 	Phone       string            `json:"phone,omitempty" bson:"phone,omitempty"`
 	PushToken   string            `json:"pushToken,omitempty" bson:"pushToken,omitempty"`
@@ -29,7 +29,7 @@ type Subscriber struct {
 	Preferences SubscriberPrefs   `json:"preferences" bson:"preferences"`
 	Groups      []string          `json:"groups" bson:"groups"`
 	Metadata    map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
-	CreatedAt   time.Time         `json:"createdAt" bson:"createdAt"`
+	CreatedAt   time.Time         `json:"createdAt" bson:"createdAt" immutable:"true"`
 }
 
 type SubscriberPrefs struct {
@@ -45,34 +45,53 @@ type TimeWindow struct {
 }
 
 type Group struct {
-	ID          string            `json:"groupId" bson:"groupId"`
-	OrgID       string            `json:"orgId" bson:"orgId"`
+	ID          string            `json:"groupId" bson:"groupId" immutable:"true"`
+	OrgID       string            `json:"orgId" bson:"orgId" immutable:"true"`
 	Name        string            `json:"name" bson:"name"`
 	Description string            `json:"description,omitempty" bson:"description,omitempty"`
 	Subscribers []string          `json:"subscribers" bson:"subscribers"`
 	Metadata    map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
 }
 
+// TemplateContent represents channel-specific template content
+type TemplateContent struct {
+	// Email content
+	Subject string `json:"subject,omitempty" bson:"subject,omitempty"`
+	Body    string `json:"body" bson:"body"`
+
+	// SMS content (only body)
+	// Body is reused for SMS
+
+	// Push notification content
+	Title string `json:"title,omitempty" bson:"title,omitempty"`
+	// Body is reused for push body
+
+	// Webhook content (arbitrary JSON)
+	Payload map[string]any `json:"payload,omitempty" bson:"payload,omitempty"`
+}
+
+// Template represents a notification template with channel-specific content and translations
 type Template struct {
-	ID        string            `json:"id" bson:"id"`
-	OrgID     string            `json:"orgId" bson:"orgId"`
-	Name      string            `json:"name" bson:"name"`
-	Channel   ChannelType       `json:"channel" bson:"channel"`
-	Version   int               `json:"version" bson:"version"`
-	Body      string            `json:"body" bson:"body"`
-	Subject   string            `json:"subject,omitempty" bson:"subject,omitempty"`
-	Metadata  map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
-	CreatedAt time.Time         `json:"createdAt" bson:"createdAt"`
-	UpdatedAt time.Time         `json:"updatedAt" bson:"updatedAt"`
+	ID           string                     `json:"id" bson:"id" immutable:"true"`
+	OrgID        string                     `json:"orgId" bson:"orgId" immutable:"true"`
+	Name         string                     `json:"name" bson:"name"`
+	Channel      ChannelType                `json:"channel" bson:"channel" immutable:"true"`
+	Version      int                        `json:"version" bson:"version"`
+	Content      TemplateContent            `json:"content" bson:"content"`
+	Translations map[string]TemplateContent `json:"translations,omitempty" bson:"translations,omitempty"` // key: language code (e.g., "en", "es", "fr")
+	Metadata     map[string]string          `json:"metadata,omitempty" bson:"metadata,omitempty"`
+	CreatedAt    time.Time                  `json:"createdAt" bson:"createdAt" immutable:"true"`
+	UpdatedAt    time.Time                  `json:"updatedAt" bson:"updatedAt"`
 }
 
 type Rule struct {
-	EventType         string                 `json:"eventType" bson:"eventType"`
-	OrgID             string                 `json:"orgId" bson:"orgId"`
+	EventType         string                 `json:"eventType" bson:"eventType" immutable:"true"`
+	OrgID             string                 `json:"orgId" bson:"orgId" immutable:"true"`
 	Channels          []ChannelType          `json:"channels" bson:"channels"`
 	DefaultRecipients Recipients             `json:"defaultRecipients" bson:"defaultRecipients"`
 	TemplateRefs      map[ChannelType]string `json:"templateRefs" bson:"templateRefs"`
-	CreatedAt         time.Time              `json:"createdAt" bson:"createdAt"`
+	CreatedAt         time.Time              `json:"createdAt" bson:"createdAt" immutable:"true"`
+	UpdatedAt         time.Time              `json:"updatedAt" bson:"updatedAt"`
 }
 
 type Event struct {

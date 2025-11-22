@@ -1,13 +1,14 @@
 //go:build integration
 // +build integration
 
-package handlers
+package integration
 
 import (
 	"context"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/notifyx/api/internal/handlers/rule"
 	mongoadapter "github.com/notifyx/core/adapters/mongo"
 	"github.com/notifyx/core/storage"
 )
@@ -39,41 +40,11 @@ func setupIntegrationTest(t *testing.T) (storage.Stores, *fiber.App, func()) {
 	}
 }
 
-func setupSubscriberIntegrationApp(t *testing.T) (*fiber.App, func()) {
-	stores, app, cleanup := setupIntegrationTest(t)
-	api := app.Group("/api/v1")
-
-	subHandler := NewSubscriberHandler(stores.Subscribers)
-	subscribers := api.Group("/subscribers")
-	subscribers.Post("", subHandler.Create)
-	subscribers.Get("/:id", subHandler.Get)
-	subscribers.Put("/:id", subHandler.Update)
-	subscribers.Delete("/:id", subHandler.Delete)
-	subscribers.Get("", subHandler.List)
-
-	return app, cleanup
-}
-
-func setupGroupIntegrationApp(t *testing.T) (*fiber.App, func()) {
-	stores, app, cleanup := setupIntegrationTest(t)
-	api := app.Group("/api/v1")
-
-	groupHandler := NewGroupHandler(stores.Groups)
-	groups := api.Group("/groups")
-	groups.Post("", groupHandler.Create)
-	groups.Get("/:id", groupHandler.Get)
-	groups.Put("/:id", groupHandler.Update)
-	groups.Delete("/:id", groupHandler.Delete)
-	groups.Get("", groupHandler.List)
-
-	return app, cleanup
-}
-
 func setupRuleIntegrationApp(t *testing.T) (*fiber.App, func()) {
 	stores, app, cleanup := setupIntegrationTest(t)
 	api := app.Group("/api/v1")
 
-	ruleHandler := NewRuleHandler(stores.Rules)
+	ruleHandler := rule.NewRuleHandler(stores.Rules)
 	rules := api.Group("/rules")
 	rules.Post("", ruleHandler.Create)
 	rules.Get("/:eventType", ruleHandler.Get)
@@ -83,5 +54,3 @@ func setupRuleIntegrationApp(t *testing.T) (*fiber.App, func()) {
 
 	return app, cleanup
 }
-
-

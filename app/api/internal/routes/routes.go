@@ -3,7 +3,10 @@ package routes
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/notifyx/api/internal/auth"
-	"github.com/notifyx/api/internal/handlers"
+	"github.com/notifyx/api/internal/handlers/group"
+	"github.com/notifyx/api/internal/handlers/rule"
+	"github.com/notifyx/api/internal/handlers/subscriber"
+	"github.com/notifyx/api/internal/handlers/template"
 	"github.com/notifyx/api/internal/middlewares"
 	"github.com/notifyx/core/storage"
 )
@@ -13,11 +16,11 @@ const (
 	notifyWritePermission = "notify:write"
 )
 
-func RegisterRoutes(app *fiber.App, stores storage.Stores, validator auth.Validator) {
+func RegisterRoutes(app *fiber.App, stores storage.Stores, validator auth.AuthValidator) {
 	api := app.Group("/api/v1")
 
 	// Subscribers CRUD
-	subscriberHandler := handlers.NewSubscriberHandler(stores.Subscribers)
+	subscriberHandler := subscriber.NewSubscriberHandler(stores.Subscribers)
 	subscribers := api.Group("/subscribers", middlewares.RequireAuth(validator, notifyReadPermission))
 	subscribers.Post("", middlewares.RequireAuth(validator, notifyWritePermission), subscriberHandler.Create)
 	subscribers.Get("/:id", subscriberHandler.Get)
@@ -26,7 +29,7 @@ func RegisterRoutes(app *fiber.App, stores storage.Stores, validator auth.Valida
 	subscribers.Get("", subscriberHandler.List)
 
 	// Groups CRUD
-	groupHandler := handlers.NewGroupHandler(stores.Groups)
+	groupHandler := group.NewGroupHandler(stores.Groups)
 	groups := api.Group("/groups", middlewares.RequireAuth(validator, notifyReadPermission))
 	groups.Post("", middlewares.RequireAuth(validator, notifyWritePermission), groupHandler.Create)
 	groups.Get("/:id", groupHandler.Get)
@@ -35,7 +38,7 @@ func RegisterRoutes(app *fiber.App, stores storage.Stores, validator auth.Valida
 	groups.Get("", groupHandler.List)
 
 	// Rules CRUD
-	ruleHandler := handlers.NewRuleHandler(stores.Rules)
+	ruleHandler := rule.NewRuleHandler(stores.Rules)
 	rules := api.Group("/rules", middlewares.RequireAuth(validator, notifyReadPermission))
 	rules.Post("", middlewares.RequireAuth(validator, notifyWritePermission), ruleHandler.Create)
 	rules.Get("/:eventType", ruleHandler.Get)
@@ -44,7 +47,7 @@ func RegisterRoutes(app *fiber.App, stores storage.Stores, validator auth.Valida
 	rules.Get("", ruleHandler.List)
 
 	// Templates CRUD
-	templateHandler := handlers.NewTemplateHandler(stores.Templates)
+	templateHandler := template.NewTemplateHandler(stores.Templates)
 	templates := api.Group("/templates", middlewares.RequireAuth(validator, notifyReadPermission))
 	templates.Post("", middlewares.RequireAuth(validator, notifyWritePermission), templateHandler.Create)
 	templates.Get("/:id", templateHandler.Get)

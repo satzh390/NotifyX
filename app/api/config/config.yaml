@@ -11,10 +11,4 @@ storage:
   mongo:
     uri: "mongodb://localhost:27017"
     database: "notifyx"
-  s3:
-    bucket: "notifyx-templates"
-    region: "us-east-1"
-    endpoint: "http://localhost:4566"  # LocalStack endpoint
-    accessKeyId: "test"
-    secretKey: "test"
 

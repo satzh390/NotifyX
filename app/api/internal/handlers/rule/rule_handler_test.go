@@ -1,8 +1,7 @@
-package handlers
+package rule
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,11 +9,14 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/notifyx/core/domain"
+	"github.com/notifyx/core/storage"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func setupRuleTestApp() (*fiber.App, *mockRuleStore) {
+func setupRuleTestApp() (*fiber.App, *MockRuleStore) {
 	app := fiber.New()
-	store := &mockRuleStore{rules: make(map[string]domain.Rule)}
+	store := new(MockRuleStore)
 	handler := NewRuleHandler(store)
 
 	api := app.Group("/api/v1")
@@ -34,7 +36,16 @@ func setupRuleTestApp() (*fiber.App, *mockRuleStore) {
 }
 
 func TestRuleHandler_Create(t *testing.T) {
-	app, _ := setupRuleTestApp()
+	app, store := setupRuleTestApp()
+
+	store.On("Put", mock.Anything, mock.MatchedBy(func(r domain.Rule) bool {
+		return r.EventType == "order.created" && r.OrgID == "test-org"
+	})).Return(nil).Once()
+	store.On("Get", mock.Anything, "test-org", "order.created").Return(domain.Rule{
+		EventType: "order.created",
+		OrgID:     "test-org",
+		Channels:  []domain.ChannelType{domain.ChannelEmail, domain.ChannelSMS},
+	}, nil).Once()
 
 	body := map[string]interface{}{
 		"eventType": "order.created",
@@ -49,82 +60,77 @@ func TestRuleHandler_Create(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusCreated {
-		t.Errorf("Expected status 201, got %d", resp.StatusCode)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
 	var rule domain.Rule
-	if err := json.NewDecoder(resp.Body).Decode(&rule); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
+	err = json.NewDecoder(resp.Body).Decode(&rule)
+	assert.NoError(t, err)
+	assert.Equal(t, "order.created", rule.EventType)
+	assert.Equal(t, "test-org", rule.OrgID)
 
-	if rule.EventType != "order.created" {
-		t.Errorf("Expected eventType order.created, got %s", rule.EventType)
-	}
-	if rule.OrgID != "test-org" {
-		t.Errorf("Expected orgID test-org, got %s", rule.OrgID)
-	}
+	store.AssertExpectations(t)
 }
 
 func TestRuleHandler_Get(t *testing.T) {
 	app, store := setupRuleTestApp()
 
 	eventType := "order.created"
-	store.Put(context.Background(), domain.Rule{
+	expectedRule := domain.Rule{
 		EventType: eventType,
 		OrgID:     "test-org",
 		Channels:  []domain.ChannelType{domain.ChannelEmail},
-	})
+	}
+
+	store.On("Get", mock.Anything, "test-org", eventType).Return(expectedRule, nil).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/rules/"+eventType, nil)
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var rule domain.Rule
-	if err := json.NewDecoder(resp.Body).Decode(&rule); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
+	err = json.NewDecoder(resp.Body).Decode(&rule)
+	assert.NoError(t, err)
+	assert.Equal(t, eventType, rule.EventType)
 
-	if rule.EventType != eventType {
-		t.Errorf("Expected eventType %s, got %s", eventType, rule.EventType)
-	}
+	store.AssertExpectations(t)
 }
 
 func TestRuleHandler_Get_NotFound(t *testing.T) {
-	app, _ := setupRuleTestApp()
+	app, store := setupRuleTestApp()
+
+	store.On("Get", mock.Anything, "test-org", "non-existent").Return(domain.Rule{}, storage.ErrNotFound).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/rules/non-existent", nil)
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
-	if resp.StatusCode != http.StatusNotFound {
-		t.Errorf("Expected status 404, got %d", resp.StatusCode)
-	}
+	store.AssertExpectations(t)
 }
 
 func TestRuleHandler_Update(t *testing.T) {
 	app, store := setupRuleTestApp()
 
 	eventType := "order.created"
-	store.Put(context.Background(), domain.Rule{
+	existingRule := domain.Rule{
 		EventType: eventType,
 		OrgID:     "test-org",
 		Channels:  []domain.ChannelType{domain.ChannelEmail},
-	})
+	}
+
+	store.On("Get", mock.Anything, "test-org", eventType).Return(existingRule, nil).Once()
+	store.On("Put", mock.Anything, mock.MatchedBy(func(r domain.Rule) bool {
+		return r.EventType == eventType && len(r.Channels) == 2
+	})).Return(nil).Once()
+	store.On("Get", mock.Anything, "test-org", eventType).Return(domain.Rule{
+		EventType: eventType,
+		OrgID:     "test-org",
+		Channels:  []domain.ChannelType{domain.ChannelEmail, domain.ChannelSMS},
+	}, nil).Once()
 
 	patch := map[string]interface{}{
 		"channels": []string{"email", "sms"},
@@ -135,72 +141,63 @@ func TestRuleHandler_Update(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
+	store.AssertExpectations(t)
 }
 
 func TestRuleHandler_Delete(t *testing.T) {
 	app, store := setupRuleTestApp()
 
 	eventType := "order.created"
-	store.Put(context.Background(), domain.Rule{
+	existingRule := domain.Rule{
 		EventType: eventType,
 		OrgID:     "test-org",
-	})
+	}
+
+	store.On("Get", mock.Anything, "test-org", eventType).Return(existingRule, nil).Once()
+	store.On("Delete", mock.Anything, "test-org", eventType).Return(nil).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/rules/"+eventType, nil)
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 
-	if resp.StatusCode != http.StatusNoContent {
-		t.Errorf("Expected status 204, got %d", resp.StatusCode)
-	}
-
-	// Verify deleted
-	_, err = store.Get(context.Background(), "test-org", eventType)
-	if err == nil {
-		t.Error("Expected rule to be deleted")
-	}
+	store.AssertExpectations(t)
 }
 
 func TestRuleHandler_List(t *testing.T) {
 	app, store := setupRuleTestApp()
 
-	store.Put(context.Background(), domain.Rule{
-		EventType: "order.created",
-		OrgID:     "test-org",
-	})
-	store.Put(context.Background(), domain.Rule{
-		EventType: "order.updated",
-		OrgID:     "test-org",
-	})
+	expectedResult := domain.ListResult[domain.Rule]{
+		Items: []domain.Rule{
+			{EventType: "order.created", OrgID: "test-org"},
+			{EventType: "order.updated", OrgID: "test-org"},
+		},
+		Pagination: domain.PaginationResult{
+			Page:       1,
+			PageSize:   20,
+			TotalCount: 2,
+			TotalPages: 1,
+		},
+	}
+
+	store.On("List", mock.Anything, mock.MatchedBy(func(opts domain.ListOptions) bool {
+		return opts.Pagination.Page == 1 && opts.Pagination.PageSize == 20
+	})).Return(expectedResult, nil).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/rules?page=1&pageSize=20", nil)
 	resp, err := app.Test(req)
 
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var result domain.ListResult[domain.Rule]
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.GreaterOrEqual(t, result.Pagination.TotalCount, int64(2))
 
-	if result.Pagination.TotalCount < 2 {
-		t.Errorf("Expected at least 2 rules, got %d", result.Pagination.TotalCount)
-	}
+	store.AssertExpectations(t)
 }
-
