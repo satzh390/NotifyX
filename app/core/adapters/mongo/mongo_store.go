@@ -150,8 +150,17 @@ func (repo *GroupRepository) Put(ctx context.Context, group domain.Group) error 
 		return err
 	}
 
+	updateMap["updatedAt"] = time.Now()
+	update := bson.M{
+		"$set": updateMap,
+		"$setOnInsert": bson.M{
+			"createdAt": time.Now(),
+			"orgId":     group.OrgID,
+			"groupId":   group.ID,
+		},
+	}
 	opts := options.Update().SetUpsert(true)
-	_, err = repo.collection.UpdateOne(ctx, filter, updateMap, opts)
+	_, err = repo.collection.UpdateOne(ctx, filter, update, opts)
 	return err
 }
 

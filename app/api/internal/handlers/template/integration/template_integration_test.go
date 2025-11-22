@@ -59,7 +59,7 @@ func TestIntegration_Template_Get(t *testing.T) {
 	defer cleanup()
 
 	// Create a template first
-	stores, _, _ := handlers.SetupIntegrationTest(t)
+	stores, _, _ := setupIntegrationTest(t)
 	ctx := context.Background()
 
 	templateID := uuid.NewString()
@@ -104,7 +104,7 @@ func TestIntegration_Template_Update(t *testing.T) {
 	defer cleanup()
 
 	// Create a template first
-	stores, _, _ := handlers.SetupIntegrationTest(t)
+	stores, _, _ := setupIntegrationTest(t)
 	ctx := context.Background()
 
 	templateID := uuid.NewString()
@@ -158,7 +158,7 @@ func TestIntegration_Template_Delete(t *testing.T) {
 	defer cleanup()
 
 	// Create a template first
-	stores, _, _ := handlers.SetupIntegrationTest(t)
+	stores, _, _ := setupIntegrationTest(t)
 	ctx := context.Background()
 
 	templateID := uuid.NewString()
