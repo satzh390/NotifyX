@@ -2,30 +2,27 @@ package auth
 
 import (
 	"context"
-	"crypto/subtle"
 	"errors"
 	"strings"
 	"time"
 
 	keyfunc "github.com/MicahParks/keyfunc/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/notifyx/httpx"
 )
 
+// Claims is an alias to httpx.Claims for backward compatibility
+type Claims = httpx.Claims
+
+// AuthValidator is an alias to httpx.AuthValidator for backward compatibility
+type AuthValidator = httpx.AuthValidator
+
+// Use httpx error constants
 var (
-	ErrMissingToken      = errors.New("auth: missing bearer token")
-	ErrInvalidToken      = errors.New("auth: token invalid")
-	ErrInsufficientScope = errors.New("auth: insufficient scope")
+	ErrMissingToken      = httpx.ErrMissingToken
+	ErrInvalidToken      = httpx.ErrInvalidToken
+	ErrInsufficientScope  = httpx.ErrInsufficientScope
 )
-
-type Claims struct {
-	OrgID   string
-	Scopes  []string
-	Subject string
-}
-
-type AuthValidator interface {
-	Validate(ctx context.Context, token string) (Claims, error)
-}
 
 type JWKSValidator struct {
 	issuer   string
@@ -62,9 +59,9 @@ func NewJWKSValidator(ctx context.Context, issuer, jwksURL string, audience []st
 	}, nil
 }
 
-func (validator *JWKSValidator) Validate(ctx context.Context, token string) (Claims, error) {
+func (validator *JWKSValidator) Validate(ctx context.Context, token string) (httpx.Claims, error) {
 	if token == "" {
-		return Claims{}, ErrMissingToken
+		return httpx.Claims{}, ErrMissingToken
 	}
 
 	parserOpts := []jwt.ParserOption{
@@ -77,23 +74,23 @@ func (validator *JWKSValidator) Validate(ctx context.Context, token string) (Cla
 
 	parsedToken, err := jwt.Parse(token, validator.jwks.Keyfunc, parserOpts...)
 	if err != nil {
-		return Claims{}, ErrInvalidToken
+		return httpx.Claims{}, ErrInvalidToken
 	}
 	if !parsedToken.Valid {
-		return Claims{}, ErrInvalidToken
+		return httpx.Claims{}, ErrInvalidToken
 	}
 
 	mapClaims, ok := parsedToken.Claims.(jwt.MapClaims)
 	if !ok {
-		return Claims{}, ErrInvalidToken
+		return httpx.Claims{}, ErrInvalidToken
 	}
 
 	orgID := getStringClaim(mapClaims["orgId"])
 	if orgID == "" {
-		return Claims{}, errors.New("auth: orgId missing in token")
+		return httpx.Claims{}, errors.New("auth: orgId missing in token")
 	}
 
-	return Claims{
+	return httpx.Claims{
 		OrgID:   orgID,
 		Scopes:  extractScopes(mapClaims),
 		Subject: getStringClaim(mapClaims["sub"]),
@@ -137,21 +134,5 @@ func getStringClaim(value any) string {
 	return ""
 }
 
-func HasScopes(claims Claims, required ...string) bool {
-	if len(required) == 0 {
-		return true
-	}
-	for _, requiredScope := range required {
-		match := false
-		for _, scope := range claims.Scopes {
-			if subtle.ConstantTimeCompare([]byte(scope), []byte(requiredScope)) == 1 {
-				match = true
-				break
-			}
-		}
-		if !match {
-			return false
-		}
-	}
-	return true
-}
+// HasScopes is an alias to httpx.HasScopes for backward compatibility
+var HasScopes = httpx.HasScopes

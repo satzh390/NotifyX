@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/notifyx/api/internal/middlewares"
 	"github.com/notifyx/core/domain"
 	"github.com/notifyx/core/storage"
 	"github.com/notifyx/httpx"
@@ -19,11 +18,15 @@ func NewRuleHandler(store storage.RuleStore) *RuleHandler {
 	return &RuleHandler{store: store}
 }
 
-type ruleRequest struct {
-	EventType         string                        `json:"eventType"`
-	Channels          []domain.ChannelType          `json:"channels"`
-	DefaultRecipients domain.Recipients             `json:"defaultRecipients"`
-	TemplateRefs      map[domain.ChannelType]string `json:"templateRefs"`
+type RuleRequest struct {
+	// EventType is required - the event type identifier (e.g., "order.created")
+	EventType string `json:"eventType" validate:"required" example:"order.created"`
+	// Channels - list of notification channels for this rule
+	Channels []domain.ChannelType `json:"channels"`
+	// DefaultRecipients - default recipients for this rule
+	DefaultRecipients domain.Recipients `json:"defaultRecipients"`
+	// TemplateRefs - template references by channel type
+	TemplateRefs map[domain.ChannelType]string `json:"templateRefs"`
 }
 
 // CreateRule godoc
@@ -32,20 +35,16 @@ type ruleRequest struct {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param rule body ruleRequest true "Rule data"
+// @Param rule body RuleRequest true "Rule data (eventType is required)"
 // @Success 201 {object} domain.Rule
-// @Failure 400 {object} map[string]string
+// @Failure 400 {object} map[string]string "Bad request - validation error (e.g., eventType is required)"
 // @Failure 500 {object} map[string]string
 // @Router /rules [post]
 func (handler *RuleHandler) Create(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
-	var body ruleRequest
-	if err := fiberCtx.BodyParser(&body); err != nil {
-		return fiber.NewError(http.StatusBadRequest, "invalid body: "+err.Error())
-	}
-
-	if body.EventType == "" {
-		return fiber.NewError(http.StatusBadRequest, "eventType is required")
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	body, err := httpx.ParseAndValidateBody[RuleRequest](fiberCtx)
+	if err != nil {
+		return err
 	}
 
 	rule := domain.Rule{
@@ -82,7 +81,7 @@ func (handler *RuleHandler) Create(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /rules/{eventType} [get]
 func (handler *RuleHandler) Get(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	eventType := fiberCtx.Params("eventType")
 	if eventType == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing event type")
@@ -113,7 +112,7 @@ func (handler *RuleHandler) Get(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /rules/{eventType} [put]
 func (handler *RuleHandler) Update(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	eventType := fiberCtx.Params("eventType")
 	if eventType == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing event type")
@@ -127,8 +126,13 @@ func (handler *RuleHandler) Update(fiberCtx *fiber.Ctx) error {
 		return fiber.NewError(http.StatusInternalServerError, err.Error())
 	}
 
+	// Validate patch body and get raw bytes for merge patch
+	patchData, err := httpx.ValidatePatchBody[RuleRequest](fiberCtx)
+	if err != nil {
+		return err
+	}
+
 	// Apply merge patch
-	patchData := fiberCtx.Body()
 	if err := httpx.MergePatch(&existing, patchData); err != nil {
 		return fiber.NewError(http.StatusBadRequest, "invalid patch: "+err.Error())
 	}
@@ -153,7 +157,7 @@ func (handler *RuleHandler) Update(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /rules/{eventType} [delete]
 func (handler *RuleHandler) Delete(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	eventType := fiberCtx.Params("eventType")
 	if eventType == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing event type")
@@ -183,7 +187,7 @@ func (handler *RuleHandler) Delete(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /rules [get]
 func (handler *RuleHandler) List(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	opts := httpx.ParseListOptions(fiberCtx, orgID)
 
 	result, err := handler.store.List(context.Background(), opts)

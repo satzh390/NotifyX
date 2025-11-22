@@ -8,14 +8,14 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/notifyx/api/internal/auth"
 	"github.com/notifyx/core/storage"
+	"github.com/notifyx/httpx"
 )
 
 type mockValidator struct{}
 
-func (m *mockValidator) Validate(ctx context.Context, token string) (auth.Claims, error) {
-	return auth.Claims{
+func (m *mockValidator) Validate(ctx context.Context, token string) (httpx.Claims, error) {
+	return httpx.Claims{
 		OrgID:  "test-org",
 		Scopes: []string{"notify:read", "notify:write"},
 	}, nil

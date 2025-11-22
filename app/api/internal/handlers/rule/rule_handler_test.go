@@ -72,6 +72,23 @@ func TestRuleHandler_Create(t *testing.T) {
 	store.AssertExpectations(t)
 }
 
+func TestRuleHandler_Create_ValidationError(t *testing.T) {
+	app, _ := setupRuleTestApp()
+
+	// Test missing eventType
+	body := map[string]interface{}{
+		"channels": []string{"email", "sms"},
+	}
+	bodyJSON, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rules", bytes.NewReader(bodyJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
 func TestRuleHandler_Get(t *testing.T) {
 	app, store := setupRuleTestApp()
 
@@ -128,7 +145,8 @@ func TestRuleHandler_Update(t *testing.T) {
 	})).Return(nil).Once()
 
 	patch := map[string]interface{}{
-		"channels": []string{"email", "sms"},
+		"eventType": eventType,
+		"channels":  []string{"email", "sms"},
 	}
 	patchJSON, _ := json.Marshal(patch)
 

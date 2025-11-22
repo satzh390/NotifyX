@@ -14,9 +14,9 @@ import (
 	"os"
 
 	"github.com/notifyx/api/config"
-	"github.com/notifyx/api/internal/auth"
 	"github.com/notifyx/api/internal/server"
 	mongoadapter "github.com/notifyx/core/adapters/mongo"
+	"github.com/notifyx/httpx"
 )
 
 func main() {
@@ -45,7 +45,7 @@ func main() {
 		}
 	}()
 
-	validator, err := auth.NewJWKSValidator(ctx, cfg.OAuth.Issuer, cfg.OAuth.JWKS, cfg.OAuth.Audiences)
+	validator, err := httpx.NewJWKSValidator(ctx, cfg.OAuth.Issuer, cfg.OAuth.JWKS, cfg.OAuth.Audiences)
 	if err != nil {
 		log.Fatalf("failed to initialize auth validator: %v", err)
 	}

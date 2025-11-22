@@ -79,6 +79,41 @@ func TestSubscriberHandler_Create(t *testing.T) {
 	store.AssertExpectations(t)
 }
 
+func TestSubscriberHandler_Create_ValidationError(t *testing.T) {
+	app, _ := setupSubscriberTestApp()
+
+	tests := []struct {
+		name string
+		body map[string]interface{}
+	}{
+		{
+			name: "invalid email format",
+			body: map[string]interface{}{
+				"email": "invalid-email",
+			},
+		},
+		{
+			name: "invalid webhook URL",
+			body: map[string]interface{}{
+				"email":      "test@example.com",
+				"webhookUrl": "not-a-valid-url",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bodyJSON, _ := json.Marshal(tt.body)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/subscribers", bytes.NewReader(bodyJSON))
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := app.Test(req)
+
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
+	}
+}
+
 func TestSubscriberHandler_Get(t *testing.T) {
 	app, store := setupSubscriberTestApp()
 
@@ -153,6 +188,42 @@ func TestSubscriberHandler_Update(t *testing.T) {
 	assert.Equal(t, "new@example.com", updated.Email)
 
 	store.AssertExpectations(t)
+}
+
+func TestSubscriberHandler_Update_ValidationError(t *testing.T) {
+	app, _ := setupSubscriberTestApp()
+
+	subID := uuid.NewString()
+
+	tests := []struct {
+		name string
+		body map[string]interface{}
+	}{
+		{
+			name: "invalid email format in patch",
+			body: map[string]interface{}{
+				"email": "invalid-email",
+			},
+		},
+		{
+			name: "invalid webhook URL in patch",
+			body: map[string]interface{}{
+				"webhookUrl": "not-a-valid-url",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bodyJSON, _ := json.Marshal(tt.body)
+			req := httptest.NewRequest(http.MethodPut, "/api/v1/subscribers/"+subID, bytes.NewReader(bodyJSON))
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := app.Test(req)
+
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
+	}
 }
 
 func TestSubscriberHandler_Delete(t *testing.T) {

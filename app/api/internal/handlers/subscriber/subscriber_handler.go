@@ -6,7 +6,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/notifyx/api/internal/middlewares"
 	"github.com/notifyx/core/domain"
 	"github.com/notifyx/core/storage"
 	"github.com/notifyx/httpx"
@@ -20,15 +19,23 @@ func NewSubscriberHandler(store storage.SubscriberStore) *SubscriberHandler {
 	return &SubscriberHandler{store: store}
 }
 
-type subscriberRequest struct {
-	SubscriberID string            `json:"subscriberId"`
-	Email        string            `json:"email"`
-	Phone        string            `json:"phone"`
-	PushToken    string            `json:"pushToken"`
-	WebhookURL   string            `json:"webhookUrl"`
-	Groups       []string          `json:"groups"`
-	Metadata     map[string]string `json:"metadata"`
-	Preferences  struct {
+type SubscriberRequest struct {
+	// SubscriberID - optional, will be auto-generated if not provided
+	SubscriberID string `json:"subscriberId"`
+	// Email - optional, must be valid email format if provided
+	Email string `json:"email" validate:"omitempty,email" example:"user@example.com"`
+	// Phone - optional phone number
+	Phone string `json:"phone"`
+	// PushToken - optional push notification token
+	PushToken string `json:"pushToken"`
+	// WebhookURL - optional, must be valid URL format if provided
+	WebhookURL string `json:"webhookUrl" validate:"omitempty,url" example:"https://example.com/webhook"`
+	// Groups - list of group IDs this subscriber belongs to
+	Groups []string `json:"groups"`
+	// Metadata - optional key-value pairs for additional data
+	Metadata map[string]string `json:"metadata"`
+	// Preferences - subscriber notification preferences
+	Preferences struct {
 		Channels           map[domain.ChannelType]bool `json:"channels"`
 		Language           string                      `json:"language"`
 		AllowedDays        []string                    `json:"allowedDays"`
@@ -45,16 +52,16 @@ type subscriberRequest struct {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param subscriber body subscriberRequest true "Subscriber data"
+// @Param subscriber body SubscriberRequest true "Subscriber data (email must be valid email format if provided, webhookUrl must be valid URL if provided)"
 // @Success 201 {object} domain.Subscriber
-// @Failure 400 {object} map[string]string
+// @Failure 400 {object} map[string]string "Bad request - validation error (e.g., invalid email format, invalid URL format)"
 // @Failure 500 {object} map[string]string
 // @Router /subscribers [post]
 func (handler *SubscriberHandler) Create(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
-	var body subscriberRequest
-	if err := fiberCtx.BodyParser(&body); err != nil {
-		return fiber.NewError(http.StatusBadRequest, "invalid body: "+err.Error())
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	body, err := httpx.ParseAndValidateBody[SubscriberRequest](fiberCtx)
+	if err != nil {
+		return err
 	}
 
 	subscriberID := body.SubscriberID
@@ -108,7 +115,7 @@ func (handler *SubscriberHandler) Create(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /subscribers/{id} [get]
 func (handler *SubscriberHandler) Get(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	subscriberID := fiberCtx.Params("id")
 	if subscriberID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing subscriber id")
@@ -139,10 +146,16 @@ func (handler *SubscriberHandler) Get(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /subscribers/{id} [put]
 func (handler *SubscriberHandler) Update(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	subscriberID := fiberCtx.Params("id")
 	if subscriberID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing subscriber id")
+	}
+
+	// Validate patch body and get raw bytes for merge patch
+	patchData, err := httpx.ValidatePatchBody[SubscriberRequest](fiberCtx)
+	if err != nil {
+		return err
 	}
 
 	existing, err := handler.store.Get(context.Background(), orgID, subscriberID)
@@ -154,7 +167,6 @@ func (handler *SubscriberHandler) Update(fiberCtx *fiber.Ctx) error {
 	}
 
 	// Apply merge patch
-	patchData := fiberCtx.Body()
 	if err := httpx.MergePatch(&existing, patchData); err != nil {
 		return fiber.NewError(http.StatusBadRequest, "invalid patch: "+err.Error())
 	}
@@ -179,7 +191,7 @@ func (handler *SubscriberHandler) Update(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /subscribers/{id} [delete]
 func (handler *SubscriberHandler) Delete(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	subscriberID := fiberCtx.Params("id")
 	if subscriberID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing subscriber id")
@@ -209,7 +221,7 @@ func (handler *SubscriberHandler) Delete(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /subscribers [get]
 func (handler *SubscriberHandler) List(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	opts := httpx.ParseListOptions(fiberCtx, orgID)
 
 	result, err := handler.store.List(context.Background(), opts)

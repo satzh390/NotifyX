@@ -6,7 +6,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/notifyx/api/internal/middlewares"
 	"github.com/notifyx/core/domain"
 	"github.com/notifyx/core/storage"
 	"github.com/notifyx/httpx"
@@ -20,12 +19,17 @@ func NewGroupHandler(store storage.GroupStore) *GroupHandler {
 	return &GroupHandler{store: store}
 }
 
-type groupRequest struct {
-	GroupID     string            `json:"groupId"`
-	Name        string            `json:"name"`
-	Description string            `json:"description"`
-	Subscribers []string          `json:"subscribers"`
-	Metadata    map[string]string `json:"metadata"`
+type GroupRequest struct {
+	// GroupID - optional, will be auto-generated if not provided
+	GroupID string `json:"groupId"`
+	// Name is required - the name of the group
+	Name string `json:"name" validate:"required" example:"VIP Customers"`
+	// Description - optional description of the group
+	Description string `json:"description"`
+	// Subscribers - list of subscriber IDs in this group
+	Subscribers []string `json:"subscribers"`
+	// Metadata - optional key-value pairs for additional data
+	Metadata map[string]string `json:"metadata"`
 }
 
 // CreateGroup godoc
@@ -34,16 +38,16 @@ type groupRequest struct {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param group body groupRequest true "Group data"
+// @Param group body GroupRequest true "Group data (name is required)"
 // @Success 201 {object} domain.Group
-// @Failure 400 {object} map[string]string
+// @Failure 400 {object} map[string]string "Bad request - validation error (e.g., name is required)"
 // @Failure 500 {object} map[string]string
 // @Router /groups [post]
 func (handler *GroupHandler) Create(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
-	var body groupRequest
-	if err := fiberCtx.BodyParser(&body); err != nil {
-		return fiber.NewError(http.StatusBadRequest, "invalid body: "+err.Error())
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	body, err := httpx.ParseAndValidateBody[GroupRequest](fiberCtx)
+	if err != nil {
+		return err
 	}
 
 	groupID := body.GroupID
@@ -80,7 +84,7 @@ func (handler *GroupHandler) Create(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /groups/{id} [get]
 func (handler *GroupHandler) Get(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	groupID := fiberCtx.Params("id")
 	if groupID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing group id")
@@ -111,7 +115,7 @@ func (handler *GroupHandler) Get(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /groups/{id} [put]
 func (handler *GroupHandler) Update(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	groupID := fiberCtx.Params("id")
 	if groupID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing group id")
@@ -125,8 +129,13 @@ func (handler *GroupHandler) Update(fiberCtx *fiber.Ctx) error {
 		return fiber.NewError(http.StatusInternalServerError, err.Error())
 	}
 
+	// Validate patch body and get raw bytes for merge patch
+	patchData, err := httpx.ValidatePatchBody[GroupRequest](fiberCtx)
+	if err != nil {
+		return err
+	}
+
 	// Apply merge patch
-	patchData := fiberCtx.Body()
 	if err := httpx.MergePatch(&existing, patchData); err != nil {
 		return fiber.NewError(http.StatusBadRequest, "invalid patch: "+err.Error())
 	}
@@ -151,7 +160,7 @@ func (handler *GroupHandler) Update(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /groups/{id} [delete]
 func (handler *GroupHandler) Delete(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	groupID := fiberCtx.Params("id")
 	if groupID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing group id")
@@ -181,7 +190,7 @@ func (handler *GroupHandler) Delete(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /groups [get]
 func (handler *GroupHandler) List(fiberCtx *fiber.Ctx) error {
-	orgID := middlewares.OrgIDFromCtx(fiberCtx)
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	opts := httpx.ParseListOptions(fiberCtx, orgID)
 
 	result, err := handler.store.List(context.Background(), opts)

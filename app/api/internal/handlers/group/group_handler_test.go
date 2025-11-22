@@ -67,6 +67,23 @@ func TestGroupHandler_Create(t *testing.T) {
 	store.AssertExpectations(t)
 }
 
+func TestGroupHandler_Create_ValidationError(t *testing.T) {
+	app, _ := setupGroupTestApp()
+
+	// Test missing name
+	body := map[string]interface{}{
+		"description": "Test Description",
+	}
+	bodyJSON, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups", bytes.NewReader(bodyJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
 func TestGroupHandler_Get(t *testing.T) {
 	app, store := setupGroupTestApp()
 

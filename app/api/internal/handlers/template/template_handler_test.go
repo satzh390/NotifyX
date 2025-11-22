@@ -70,6 +70,53 @@ func TestTemplateHandler_Create(t *testing.T) {
 	store.AssertExpectations(t)
 }
 
+func TestTemplateHandler_Create_ValidationError(t *testing.T) {
+	app, _ := setupTemplateTestApp()
+
+	tests := []struct {
+		name string
+		body map[string]interface{}
+	}{
+		{
+			name: "missing name",
+			body: map[string]interface{}{
+				"channel": "email",
+				"content": map[string]interface{}{
+					"body": "Test body",
+				},
+			},
+		},
+		{
+			name: "missing channel",
+			body: map[string]interface{}{
+				"name": "Test Template",
+				"content": map[string]interface{}{
+					"body": "Test body",
+				},
+			},
+		},
+		{
+			name: "missing content",
+			body: map[string]interface{}{
+				"name":    "Test Template",
+				"channel": "email",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bodyJSON, _ := json.Marshal(tt.body)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/templates", bytes.NewReader(bodyJSON))
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := app.Test(req)
+
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
+	}
+}
+
 func TestTemplateHandler_Get(t *testing.T) {
 	app, store := setupTemplateTestApp()
 

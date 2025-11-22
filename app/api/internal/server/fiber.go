@@ -11,9 +11,9 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/gofiber/swagger"
-	"github.com/notifyx/api/internal/auth"
 	"github.com/notifyx/api/internal/routes"
 	"github.com/notifyx/core/storage"
+	"github.com/notifyx/httpx"
 
 	_ "github.com/notifyx/api/docs" // swagger docs
 )
@@ -26,10 +26,10 @@ type Server struct {
 	cfg       Config
 	app       *fiber.App
 	stores    storage.Stores
-	validator auth.AuthValidator
+	validator httpx.AuthValidator
 }
 
-func New(cfg Config, stores storage.Stores, validator auth.AuthValidator) *Server {
+func New(cfg Config, stores storage.Stores, validator httpx.AuthValidator) *Server {
 	// Create Fiber app with custom config
 	app := fiber.New(fiber.Config{
 		ErrorHandler: customErrorHandler,
