@@ -19,6 +19,12 @@ func (m *MockSubscriberStore) Put(ctx context.Context, sub domain.Subscriber) er
 
 func (m *MockSubscriberStore) Get(ctx context.Context, orgID, subscriberID string) (domain.Subscriber, error) {
 	args := m.Called(ctx, orgID, subscriberID)
+	
+	// Handle function return values
+	if fn, ok := args.Get(0).(func(context.Context, string, string) domain.Subscriber); ok {
+		return fn(ctx, orgID, subscriberID), args.Error(1)
+	}
+	
 	return args.Get(0).(domain.Subscriber), args.Error(1)
 }
 

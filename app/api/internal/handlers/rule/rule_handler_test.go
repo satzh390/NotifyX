@@ -126,11 +126,6 @@ func TestRuleHandler_Update(t *testing.T) {
 	store.On("Put", mock.Anything, mock.MatchedBy(func(r domain.Rule) bool {
 		return r.EventType == eventType && len(r.Channels) == 2
 	})).Return(nil).Once()
-	store.On("Get", mock.Anything, "test-org", eventType).Return(domain.Rule{
-		EventType: eventType,
-		OrgID:     "test-org",
-		Channels:  []domain.ChannelType{domain.ChannelEmail, domain.ChannelSMS},
-	}, nil).Once()
 
 	patch := map[string]interface{}{
 		"channels": []string{"email", "sms"},
@@ -151,12 +146,7 @@ func TestRuleHandler_Delete(t *testing.T) {
 	app, store := setupRuleTestApp()
 
 	eventType := "order.created"
-	existingRule := domain.Rule{
-		EventType: eventType,
-		OrgID:     "test-org",
-	}
 
-	store.On("Get", mock.Anything, "test-org", eventType).Return(existingRule, nil).Once()
 	store.On("Delete", mock.Anything, "test-org", eventType).Return(nil).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/rules/"+eventType, nil)

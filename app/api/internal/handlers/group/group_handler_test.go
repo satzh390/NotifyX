@@ -150,14 +150,7 @@ func TestGroupHandler_Delete(t *testing.T) {
 	app, store := setupGroupTestApp()
 
 	groupID := uuid.NewString()
-	existingGroup := domain.Group{
-		ID:    groupID,
-		OrgID: "test-org",
-		Name:  "Test Group",
-	}
 
-	// Mock Get to return existing group
-	store.On("Get", mock.Anything, "test-org", groupID).Return(existingGroup, nil).Once()
 	// Mock Delete to succeed
 	store.On("Delete", mock.Anything, "test-org", groupID).Return(nil).Once()
 
@@ -173,7 +166,7 @@ func TestGroupHandler_Delete(t *testing.T) {
 func TestGroupHandler_Delete_NotFound(t *testing.T) {
 	app, store := setupGroupTestApp()
 
-	store.On("Get", mock.Anything, "test-org", "non-existent").Return(domain.Group{}, storage.ErrNotFound).Once()
+	store.On("Delete", mock.Anything, "test-org", "non-existent").Return(storage.ErrNotFound).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/non-existent", nil)
 	resp, err := app.Test(req)

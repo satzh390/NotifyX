@@ -166,19 +166,7 @@ func TestTemplateHandler_Delete(t *testing.T) {
 	app, store := setupTemplateTestApp()
 
 	templateID := uuid.NewString()
-	existingTemplate := domain.Template{
-		ID:      templateID,
-		OrgID:   "test-org",
-		Name:    "Test Template",
-		Channel: domain.ChannelEmail,
-		Content: domain.TemplateContent{
-			Body: "Test body",
-		},
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
 
-	store.On("Get", mock.Anything, "test-org", templateID).Return(existingTemplate, nil).Once()
 	store.On("Delete", mock.Anything, "test-org", templateID).Return(nil).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/templates/"+templateID, nil)

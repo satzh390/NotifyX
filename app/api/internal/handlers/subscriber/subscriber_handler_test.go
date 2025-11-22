@@ -2,6 +2,7 @@ package subscriber
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -43,6 +44,15 @@ func TestSubscriberHandler_Create(t *testing.T) {
 	store.On("Put", mock.Anything, mock.MatchedBy(func(s domain.Subscriber) bool {
 		return s.Email == "test@example.com" && s.OrgID == "test-org"
 	})).Return(nil).Once()
+
+	// Mock Get to return the created subscriber (handler calls Get after Put)
+	store.On("Get", mock.Anything, "test-org", mock.AnythingOfType("string")).Return(func(ctx context.Context, orgID string, id string) domain.Subscriber {
+		return domain.Subscriber{
+			ID:    id,
+			OrgID: "test-org",
+			Email: "test@example.com",
+		}
+	}, nil).Once()
 
 	body := map[string]interface{}{
 		"email": "test@example.com",
@@ -149,13 +159,8 @@ func TestSubscriberHandler_Delete(t *testing.T) {
 	app, store := setupSubscriberTestApp()
 
 	subID := uuid.NewString()
-	existingSubscriber := domain.Subscriber{
-		ID:    subID,
-		OrgID: "test-org",
-		Email: "test@example.com",
-	}
 
-	store.On("Get", mock.Anything, "test-org", subID).Return(existingSubscriber, nil).Once()
+	// Mock Delete to succeed
 	store.On("Delete", mock.Anything, "test-org", subID).Return(nil).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/subscribers/"+subID, nil)
@@ -170,7 +175,7 @@ func TestSubscriberHandler_Delete(t *testing.T) {
 func TestSubscriberHandler_Delete_NotFound(t *testing.T) {
 	app, store := setupSubscriberTestApp()
 
-	store.On("Get", mock.Anything, "test-org", "non-existent").Return(domain.Subscriber{}, storage.ErrNotFound).Once()
+	store.On("Delete", mock.Anything, "test-org", "non-existent").Return(storage.ErrNotFound).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/subscribers/non-existent", nil)
 	resp, err := app.Test(req)
