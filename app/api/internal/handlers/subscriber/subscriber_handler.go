@@ -39,6 +39,17 @@ type subscriberRequest struct {
 	} `json:"preferences"`
 }
 
+// CreateSubscriber godoc
+// @Summary Create a new subscriber
+// @Tags subscribers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param subscriber body subscriberRequest true "Subscriber data"
+// @Success 201 {object} domain.Subscriber
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /subscribers [post]
 func (handler *SubscriberHandler) Create(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	var body subscriberRequest
@@ -84,6 +95,18 @@ func (handler *SubscriberHandler) Create(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.Status(http.StatusCreated).JSON(created)
 }
 
+// GetSubscriber godoc
+// @Summary Get a subscriber by ID
+// @Tags subscribers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Subscriber ID"
+// @Success 200 {object} domain.Subscriber
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /subscribers/{id} [get]
 func (handler *SubscriberHandler) Get(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	subscriberID := fiberCtx.Params("id")
@@ -102,6 +125,19 @@ func (handler *SubscriberHandler) Get(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.JSON(subscriber)
 }
 
+// UpdateSubscriber godoc
+// @Summary Update a subscriber (merge patch)
+// @Tags subscribers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Subscriber ID"
+// @Param subscriber body object true "Subscriber patch data"
+// @Success 200 {object} domain.Subscriber
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /subscribers/{id} [put]
 func (handler *SubscriberHandler) Update(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	subscriberID := fiberCtx.Params("id")
@@ -130,6 +166,18 @@ func (handler *SubscriberHandler) Update(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.JSON(existing)
 }
 
+// DeleteSubscriber godoc
+// @Summary Delete a subscriber
+// @Tags subscribers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Subscriber ID"
+// @Success 204
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /subscribers/{id} [delete]
 func (handler *SubscriberHandler) Delete(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	subscriberID := fiberCtx.Params("id")
@@ -147,6 +195,19 @@ func (handler *SubscriberHandler) Delete(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.SendStatus(http.StatusNoContent)
 }
 
+// ListSubscribers godoc
+// @Summary List subscribers with pagination
+// @Tags subscribers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number (0-based)" default(0)
+// @Param pageSize query int false "Page size" default(10)
+// @Param sortBy query string false "Sort field"
+// @Param sortOrder query string false "Sort order (asc/desc)" default(asc)
+// @Success 200 {object} domain.ListResult[domain.Subscriber]
+// @Failure 500 {object} map[string]string
+// @Router /subscribers [get]
 func (handler *SubscriberHandler) List(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	opts := httpx.ParseListOptions(fiberCtx, orgID)

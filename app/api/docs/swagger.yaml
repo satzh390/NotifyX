@@ -1,0 +1,1059 @@
+basePath: /api/v1
+definitions:
+  domain.ChannelType:
+    enum:
+    - email
+    - sms
+    - push
+    - webhook
+    type: string
+    x-enum-varnames:
+    - ChannelEmail
+    - ChannelSMS
+    - ChannelPush
+    - ChannelWebhook
+  domain.Group:
+    properties:
+      description:
+        type: string
+      groupId:
+        type: string
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        type: string
+      orgId:
+        type: string
+      subscribers:
+        items:
+          type: string
+        type: array
+    type: object
+  domain.ListResult-domain_Group:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/domain.Group'
+        type: array
+      pagination:
+        $ref: '#/definitions/domain.PaginationResult'
+    type: object
+  domain.ListResult-domain_Rule:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/domain.Rule'
+        type: array
+      pagination:
+        $ref: '#/definitions/domain.PaginationResult'
+    type: object
+  domain.ListResult-domain_Subscriber:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/domain.Subscriber'
+        type: array
+      pagination:
+        $ref: '#/definitions/domain.PaginationResult'
+    type: object
+  domain.PaginationResult:
+    properties:
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      totalCount:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  domain.Recipients:
+    properties:
+      broadcast:
+        type: boolean
+      groups:
+        items:
+          type: string
+        type: array
+      subscriberIds:
+        items:
+          type: string
+        type: array
+    type: object
+  domain.Rule:
+    properties:
+      channels:
+        items:
+          $ref: '#/definitions/domain.ChannelType'
+        type: array
+      createdAt:
+        type: string
+      defaultRecipients:
+        $ref: '#/definitions/domain.Recipients'
+      eventType:
+        type: string
+      orgId:
+        type: string
+      templateRefs:
+        additionalProperties:
+          type: string
+        type: object
+      updatedAt:
+        type: string
+    type: object
+  domain.Subscriber:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      groups:
+        items:
+          type: string
+        type: array
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
+      orgId:
+        type: string
+      phone:
+        type: string
+      preferences:
+        $ref: '#/definitions/domain.SubscriberPrefs'
+      pushToken:
+        type: string
+      subscriberId:
+        type: string
+      webhookUrl:
+        type: string
+    type: object
+  domain.SubscriberPrefs:
+    properties:
+      allowedDays:
+        items:
+          type: string
+        type: array
+      channels:
+        additionalProperties:
+          type: boolean
+        type: object
+      language:
+        type: string
+      notificationWindow:
+        $ref: '#/definitions/domain.TimeWindow'
+    type: object
+  domain.Template:
+    properties:
+      channel:
+        $ref: '#/definitions/domain.ChannelType'
+      content:
+        $ref: '#/definitions/domain.TemplateContent'
+      createdAt:
+        type: string
+      id:
+        type: string
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        type: string
+      orgId:
+        type: string
+      translations:
+        additionalProperties:
+          $ref: '#/definitions/domain.TemplateContent'
+        description: 'key: language code (e.g., "en", "es", "fr")'
+        type: object
+      updatedAt:
+        type: string
+      version:
+        type: integer
+    type: object
+  domain.TemplateContent:
+    properties:
+      body:
+        type: string
+      payload:
+        additionalProperties: {}
+        description: Webhook content (arbitrary JSON)
+        type: object
+      subject:
+        description: Email content
+        type: string
+      title:
+        description: Push notification content
+        type: string
+    type: object
+  domain.TimeWindow:
+    properties:
+      end:
+        type: string
+      start:
+        type: string
+    type: object
+  internal_handlers_group.groupRequest:
+    properties:
+      description:
+        type: string
+      groupId:
+        type: string
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        type: string
+      subscribers:
+        items:
+          type: string
+        type: array
+    type: object
+  internal_handlers_rule.ruleRequest:
+    properties:
+      channels:
+        items:
+          $ref: '#/definitions/domain.ChannelType'
+        type: array
+      defaultRecipients:
+        $ref: '#/definitions/domain.Recipients'
+      eventType:
+        type: string
+      templateRefs:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  internal_handlers_subscriber.subscriberRequest:
+    properties:
+      email:
+        type: string
+      groups:
+        items:
+          type: string
+        type: array
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
+      phone:
+        type: string
+      preferences:
+        properties:
+          allowedDays:
+            items:
+              type: string
+            type: array
+          channels:
+            additionalProperties:
+              type: boolean
+            type: object
+          language:
+            type: string
+          notificationWindow:
+            properties:
+              end:
+                type: string
+              start:
+                type: string
+            type: object
+        type: object
+      pushToken:
+        type: string
+      subscriberId:
+        type: string
+      webhookUrl:
+        type: string
+    type: object
+  internal_handlers_template.templateRequest:
+    properties:
+      channel:
+        $ref: '#/definitions/domain.ChannelType'
+      content:
+        $ref: '#/definitions/domain.TemplateContent'
+      id:
+        type: string
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        type: string
+      translations:
+        additionalProperties:
+          $ref: '#/definitions/domain.TemplateContent'
+        type: object
+      version:
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: API for templates, groups, subscribers, and rules
+  title: NotifyX API
+  version: "1.0"
+paths:
+  /groups:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: pageSize
+        type: integer
+      - description: Sort field
+        in: query
+        name: sortBy
+        type: string
+      - default: asc
+        description: Sort order (asc/desc)
+        in: query
+        name: sortOrder
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ListResult-domain_Group'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List groups with pagination
+      tags:
+      - groups
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group data
+        in: body
+        name: group
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers_group.groupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Group'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new group
+      tags:
+      - groups
+  /groups/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a group
+      tags:
+      - groups
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Group'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a group by ID
+      tags:
+      - groups
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Group patch data
+        in: body
+        name: group
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Group'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a group (merge patch)
+      tags:
+      - groups
+  /rules:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: pageSize
+        type: integer
+      - description: Sort field
+        in: query
+        name: sortBy
+        type: string
+      - default: asc
+        description: Sort order (asc/desc)
+        in: query
+        name: sortOrder
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ListResult-domain_Rule'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List rules with pagination
+      tags:
+      - rules
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Rule data
+        in: body
+        name: rule
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers_rule.ruleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Rule'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new rule
+      tags:
+      - rules
+  /rules/{eventType}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Event Type
+        in: path
+        name: eventType
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a rule
+      tags:
+      - rules
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Event Type
+        in: path
+        name: eventType
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Rule'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a rule by event type
+      tags:
+      - rules
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Event Type
+        in: path
+        name: eventType
+        required: true
+        type: string
+      - description: Rule patch data
+        in: body
+        name: rule
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Rule'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a rule (merge patch)
+      tags:
+      - rules
+  /subscribers:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: pageSize
+        type: integer
+      - description: Sort field
+        in: query
+        name: sortBy
+        type: string
+      - default: asc
+        description: Sort order (asc/desc)
+        in: query
+        name: sortOrder
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ListResult-domain_Subscriber'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List subscribers with pagination
+      tags:
+      - subscribers
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Subscriber data
+        in: body
+        name: subscriber
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers_subscriber.subscriberRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Subscriber'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new subscriber
+      tags:
+      - subscribers
+  /subscribers/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Subscriber ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a subscriber
+      tags:
+      - subscribers
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Subscriber ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Subscriber'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a subscriber by ID
+      tags:
+      - subscribers
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Subscriber ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Subscriber patch data
+        in: body
+        name: subscriber
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Subscriber'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a subscriber (merge patch)
+      tags:
+      - subscribers
+  /templates:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Template data
+        in: body
+        name: template
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers_template.templateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Template'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new template
+      tags:
+      - templates
+  /templates/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a template
+      tags:
+      - templates
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Language code for translation
+        in: query
+        name: language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Template'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a template by ID
+      tags:
+      - templates
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Template patch data
+        in: body
+        name: template
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Template'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a template (merge patch)
+      tags:
+      - templates
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -133,7 +133,7 @@ type DeliveryLog struct {
 }
 
 type PaginationParams struct {
-	Page     int `json:"page"`     // 1-based page number
+	Page     int `json:"page"`     // 0-based page number
 	PageSize int `json:"pageSize"` // Number of items per page
 }
 

@@ -190,7 +190,7 @@ func TestSubscriberHandler_List(t *testing.T) {
 			{ID: "sub-2", OrgID: "test-org", Email: "test2@example.com", CreatedAt: time.Now()},
 		},
 		Pagination: domain.PaginationResult{
-			Page:       1,
+			Page:       0,
 			PageSize:   20,
 			TotalCount: 2,
 			TotalPages: 1,
@@ -198,10 +198,10 @@ func TestSubscriberHandler_List(t *testing.T) {
 	}
 
 	store.On("List", mock.Anything, mock.MatchedBy(func(opts domain.ListOptions) bool {
-		return opts.Pagination.Page == 1 && opts.Pagination.PageSize == 20
+		return opts.Pagination.Page == 0 && opts.Pagination.PageSize == 20
 	})).Return(expectedResult, nil).Once()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/subscribers?page=1&pageSize=20", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/subscribers?page=0&pageSize=20", nil)
 	resp, err := app.Test(req)
 
 	assert.NoError(t, err)
@@ -224,7 +224,7 @@ func TestSubscriberHandler_List_WithGroupFilter(t *testing.T) {
 			{ID: "sub-1", OrgID: "test-org", Groups: []string{"group-123"}},
 		},
 		Pagination: domain.PaginationResult{
-			Page:       1,
+			Page:       0,
 			PageSize:   20,
 			TotalCount: 1,
 			TotalPages: 1,
@@ -250,7 +250,7 @@ func TestSubscriberHandler_List_WithSorting(t *testing.T) {
 			{ID: "sub-1", OrgID: "test-org", CreatedAt: time.Now()},
 		},
 		Pagination: domain.PaginationResult{
-			Page:       1,
+			Page:       0,
 			PageSize:   20,
 			TotalCount: 1,
 			TotalPages: 1,
@@ -260,6 +260,67 @@ func TestSubscriberHandler_List_WithSorting(t *testing.T) {
 	store.On("List", mock.Anything, mock.Anything).Return(expectedResult, nil).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/subscribers?sortBy=createdAt:desc", nil)
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	store.AssertExpectations(t)
+}
+
+func TestSubscriberHandler_List_DefaultPagination(t *testing.T) {
+	app, store := setupSubscriberTestApp()
+
+	expectedResult := domain.ListResult[domain.Subscriber]{
+		Items: []domain.Subscriber{
+			{ID: "sub-1", OrgID: "test-org", Email: "test1@example.com", CreatedAt: time.Now()},
+		},
+		Pagination: domain.PaginationResult{
+			Page:       0,
+			PageSize:   20,
+			TotalCount: 1,
+			TotalPages: 1,
+		},
+	}
+
+	store.On("List", mock.Anything, mock.MatchedBy(func(opts domain.ListOptions) bool {
+		return opts.Pagination.Page == 0 && opts.Pagination.PageSize == 20
+	})).Return(expectedResult, nil).Once()
+
+	// Test without pagination parameters (should default to page 0)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/subscribers", nil)
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result domain.ListResult[domain.Subscriber]
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, result.Pagination.Page, "Default page should be 0")
+
+	store.AssertExpectations(t)
+}
+
+func TestSubscriberHandler_List_InvalidPagination(t *testing.T) {
+	app, store := setupSubscriberTestApp()
+
+	expectedResult := domain.ListResult[domain.Subscriber]{
+		Items: []domain.Subscriber{},
+		Pagination: domain.PaginationResult{
+			Page:       0,
+			PageSize:   20,
+			TotalCount: 0,
+			TotalPages: 0,
+		},
+	}
+
+	// Test with negative page (should default to 0)
+	store.On("List", mock.Anything, mock.MatchedBy(func(opts domain.ListOptions) bool {
+		return opts.Pagination.Page == 0
+	})).Return(expectedResult, nil).Once()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/subscribers?page=-1", nil)
 	resp, err := app.Test(req)
 
 	assert.NoError(t, err)

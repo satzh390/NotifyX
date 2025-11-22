@@ -28,6 +28,17 @@ type groupRequest struct {
 	Metadata    map[string]string `json:"metadata"`
 }
 
+// CreateGroup godoc
+// @Summary Create a new group
+// @Tags groups
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param group body groupRequest true "Group data"
+// @Success 201 {object} domain.Group
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /groups [post]
 func (handler *GroupHandler) Create(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	var body groupRequest
@@ -56,6 +67,18 @@ func (handler *GroupHandler) Create(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.Status(http.StatusCreated).JSON(group)
 }
 
+// GetGroup godoc
+// @Summary Get a group by ID
+// @Tags groups
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Group ID"
+// @Success 200 {object} domain.Group
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /groups/{id} [get]
 func (handler *GroupHandler) Get(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	groupID := fiberCtx.Params("id")
@@ -74,6 +97,19 @@ func (handler *GroupHandler) Get(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.JSON(group)
 }
 
+// UpdateGroup godoc
+// @Summary Update a group (merge patch)
+// @Tags groups
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Group ID"
+// @Param group body object true "Group patch data"
+// @Success 200 {object} domain.Group
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /groups/{id} [put]
 func (handler *GroupHandler) Update(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	groupID := fiberCtx.Params("id")
@@ -102,6 +138,18 @@ func (handler *GroupHandler) Update(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.JSON(existing)
 }
 
+// DeleteGroup godoc
+// @Summary Delete a group
+// @Tags groups
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Group ID"
+// @Success 204
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /groups/{id} [delete]
 func (handler *GroupHandler) Delete(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	groupID := fiberCtx.Params("id")
@@ -119,6 +167,19 @@ func (handler *GroupHandler) Delete(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.SendStatus(http.StatusNoContent)
 }
 
+// ListGroups godoc
+// @Summary List groups with pagination
+// @Tags groups
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number (0-based)" default(0)
+// @Param pageSize query int false "Page size" default(10)
+// @Param sortBy query string false "Sort field"
+// @Param sortOrder query string false "Sort order (asc/desc)" default(asc)
+// @Success 200 {object} domain.ListResult[domain.Group]
+// @Failure 500 {object} map[string]string
+// @Router /groups [get]
 func (handler *GroupHandler) List(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	opts := httpx.ParseListOptions(fiberCtx, orgID)

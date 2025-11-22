@@ -234,7 +234,7 @@ func TestIntegration_Subscriber_List(t *testing.T) {
 	}
 
 	// List subscribers
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/subscribers?page=1&pageSize=20", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/subscribers?page=0&pageSize=20", nil)
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("List request failed: %v", err)
@@ -275,8 +275,8 @@ func TestIntegration_Subscriber_List_WithPagination(t *testing.T) {
 		_ = stores.Subscribers.Put(ctx, sub)
 	}
 
-	// Test pagination
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/subscribers?page=1&pageSize=10", nil)
+	// Test pagination - page 0 (first page)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/subscribers?page=0&pageSize=10", nil)
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("List request failed: %v", err)
@@ -294,14 +294,37 @@ func TestIntegration_Subscriber_List_WithPagination(t *testing.T) {
 	if len(result.Items) != 10 {
 		t.Errorf("Expected 10 items, got %d", len(result.Items))
 	}
-	if result.Pagination.Page != 1 {
-		t.Errorf("Expected page 1, got %d", result.Pagination.Page)
+	if result.Pagination.Page != 0 {
+		t.Errorf("Expected page 0, got %d", result.Pagination.Page)
 	}
 	if result.Pagination.PageSize != 10 {
 		t.Errorf("Expected pageSize 10, got %d", result.Pagination.PageSize)
 	}
 	if result.Pagination.TotalCount < 25 {
 		t.Errorf("Expected totalCount >= 25, got %d", result.Pagination.TotalCount)
+	}
+
+	// Test pagination - page 1 (second page)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/subscribers?page=1&pageSize=10", nil)
+	resp, err = app.Test(req)
+	if err != nil {
+		t.Fatalf("List request failed: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	var result2 domain.ListResult[domain.Subscriber]
+	if err := json.NewDecoder(resp.Body).Decode(&result2); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if len(result2.Items) != 10 {
+		t.Errorf("Expected 10 items on page 1, got %d", len(result2.Items))
+	}
+	if result2.Pagination.Page != 1 {
+		t.Errorf("Expected page 1, got %d", result2.Pagination.Page)
 	}
 }
 

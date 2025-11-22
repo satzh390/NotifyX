@@ -5,10 +5,10 @@ package integration
 
 import (
 	"context"
-	"html/template"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/notifyx/api/internal/handlers/template"
 	mongoadapter "github.com/notifyx/core/adapters/mongo"
 	"github.com/notifyx/core/storage"
 )

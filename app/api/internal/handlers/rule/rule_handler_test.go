@@ -177,7 +177,7 @@ func TestRuleHandler_List(t *testing.T) {
 			{EventType: "order.updated", OrgID: "test-org"},
 		},
 		Pagination: domain.PaginationResult{
-			Page:       1,
+			Page:       0,
 			PageSize:   20,
 			TotalCount: 2,
 			TotalPages: 1,
@@ -185,10 +185,10 @@ func TestRuleHandler_List(t *testing.T) {
 	}
 
 	store.On("List", mock.Anything, mock.MatchedBy(func(opts domain.ListOptions) bool {
-		return opts.Pagination.Page == 1 && opts.Pagination.PageSize == 20
+		return opts.Pagination.Page == 0 && opts.Pagination.PageSize == 20
 	})).Return(expectedResult, nil).Once()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/rules?page=1&pageSize=20", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/rules?page=0&pageSize=20", nil)
 	resp, err := app.Test(req)
 
 	assert.NoError(t, err)

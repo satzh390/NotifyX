@@ -2,57 +2,167 @@
 
 ## Running Tests
 
-### Unit Tests
+### Prerequisites
 
-Run all unit tests:
+For integration tests, MongoDB must be running. Start the local infrastructure:
+
 ```bash
-cd app/core
-go test ./...
-
-cd app/api
-go test ./...
+# From project root
+docker compose -f docker-compose.yaml up -d
 ```
 
-Run tests for a specific package:
-```bash
-go test ./core/utils
-go test ./api/internal/handlers
-```
-
-Run tests with verbose output:
-```bash
-go test -v ./...
-```
-
-### Integration Tests
-
-Integration tests require MongoDB to be running. Start the local infrastructure:
-
+Or if using a different compose file:
 ```bash
 docker compose -f docker-compose.local.yaml up -d
 ```
 
-Run integration tests:
-```bash
-cd app/api
-go test -tags=integration ./internal/handlers
+### Unit Tests (UT)
 
-cd app/core
-go test -tags=integration ./adapters/mongo
+**Run all unit tests from project root:**
+
+**Windows (PowerShell):**
+```powershell
+# Run API unit tests
+cd app\api
+go test ./... -v
+
+# Run core unit tests
+cd ..\core
+go test ./... -v
+
+# Run httpx unit tests
+cd ..\httpx
+go test ./... -v
 ```
 
-Run all tests (unit + integration):
+**Linux/Mac:**
 ```bash
-go test -tags=integration ./...
+# Run API unit tests
+cd app/api
+go test ./... -v
+
+# Run core unit tests
+cd ../core
+go test ./... -v
+
+# Run httpx unit tests
+cd ../httpx
+go test ./... -v
+```
+
+**Run unit tests for a specific package:**
+```bash
+# Example: Test only subscriber handler
+cd app/api
+go test ./internal/handlers/subscriber -v
+
+# Example: Test only query parsing
+cd app/httpx
+go test ./... -v
+```
+
+### Integration Tests (IT)
+
+**Run all integration tests:**
+
+**Windows (PowerShell):**
+```powershell
+# From project root
+cd app\api
+go test -tags=integration ./... -v
+
+cd ..\core
+go test -tags=integration ./... -v
+```
+
+**Linux/Mac:**
+```bash
+# From project root
+cd app/api
+go test -tags=integration ./... -v
+
+cd ../core
+go test -tags=integration ./... -v
+```
+
+### Run Both Unit and Integration Tests
+
+**Windows (PowerShell):**
+```powershell
+# Run all tests (UT + IT) from project root
+# Make sure MongoDB is running first!
+docker compose -f docker-compose.yaml up -d
+
+# Run all tests
+cd app\api
+go test -tags=integration ./... -v
+
+cd ..\core
+go test -tags=integration ./... -v
+
+cd ..\httpx
+go test ./... -v
+```
+
+**Linux/Mac:**
+```bash
+# Run all tests (UT + IT) from project root
+# Make sure MongoDB is running first!
+docker compose -f docker-compose.yaml up -d
+
+# Run all tests
+cd app/api
+go test -tags=integration ./... -v
+
+cd ../core
+go test -tags=integration ./... -v
+
+cd ../httpx
+go test ./... -v
+```
+
+**One-liner to run all tests (from project root):**
+
+**Windows (PowerShell):**
+```powershell
+# Ensure MongoDB is running, then:
+cd app\api; go test -tags=integration ./... -v; cd ..\core; go test -tags=integration ./... -v; cd ..\httpx; go test ./... -v
+```
+
+**Linux/Mac:**
+```bash
+# Ensure MongoDB is running, then:
+cd app/api && go test -tags=integration ./... -v && cd ../core && go test -tags=integration ./... -v && cd ../httpx && go test ./... -v
 ```
 
 ### Test Coverage
 
 Generate coverage report:
-```bash
+
+**Windows (PowerShell):**
+```powershell
+# Generate coverage for unit tests
+cd app\api
 go test -cover ./...
 go test -coverprofile=coverage.out ./...
 go tool cover -html=coverage.out
+
+# Generate coverage for integration tests
+go test -tags=integration -coverprofile=coverage-it.out ./...
+go tool cover -html=coverage-it.out
+```
+
+**Linux/Mac:**
+```bash
+# Generate coverage for unit tests
+cd app/api
+go test -cover ./...
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
+
+# Generate coverage for integration tests
+go test -tags=integration -coverprofile=coverage-it.out ./...
+go tool cover -html=coverage-it.out
 ```
 
 ## Test Structure

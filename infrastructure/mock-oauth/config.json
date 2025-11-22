@@ -1,17 +1,18 @@
 {
-  "interactiveLogin": true,
+  "interactiveLogin": false,
   "tokenCallbacks": [
     {
       "issuerId": "default",
       "tokenExpiry": 3600,
       "requestMappings": [
         {
-          "requestParam": "scope",
-          "match": ".*",
+          "requestParam": "client_id",
+          "match": "my-client",
           "claims": {
+            "sub": "my-client",
             "aud": ["notifyx-api"],
             "orgId": "acme",
-            "scope": ["notify:read", "notify:write"]
+            "scope": "notify:read notify:write"
           }
         }
       ]

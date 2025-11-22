@@ -26,6 +26,17 @@ type ruleRequest struct {
 	TemplateRefs      map[domain.ChannelType]string `json:"templateRefs"`
 }
 
+// CreateRule godoc
+// @Summary Create a new rule
+// @Tags rules
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param rule body ruleRequest true "Rule data"
+// @Success 201 {object} domain.Rule
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /rules [post]
 func (handler *RuleHandler) Create(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	var body ruleRequest
@@ -58,6 +69,18 @@ func (handler *RuleHandler) Create(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.Status(http.StatusCreated).JSON(created)
 }
 
+// GetRule godoc
+// @Summary Get a rule by event type
+// @Tags rules
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param eventType path string true "Event Type"
+// @Success 200 {object} domain.Rule
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /rules/{eventType} [get]
 func (handler *RuleHandler) Get(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	eventType := fiberCtx.Params("eventType")
@@ -76,6 +99,19 @@ func (handler *RuleHandler) Get(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.JSON(rule)
 }
 
+// UpdateRule godoc
+// @Summary Update a rule (merge patch)
+// @Tags rules
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param eventType path string true "Event Type"
+// @Param rule body object true "Rule patch data"
+// @Success 200 {object} domain.Rule
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /rules/{eventType} [put]
 func (handler *RuleHandler) Update(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	eventType := fiberCtx.Params("eventType")
@@ -104,6 +140,18 @@ func (handler *RuleHandler) Update(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.JSON(existing)
 }
 
+// DeleteRule godoc
+// @Summary Delete a rule
+// @Tags rules
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param eventType path string true "Event Type"
+// @Success 204
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /rules/{eventType} [delete]
 func (handler *RuleHandler) Delete(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	eventType := fiberCtx.Params("eventType")
@@ -121,6 +169,19 @@ func (handler *RuleHandler) Delete(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.SendStatus(http.StatusNoContent)
 }
 
+// ListRules godoc
+// @Summary List rules with pagination
+// @Tags rules
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number (0-based)" default(0)
+// @Param pageSize query int false "Page size" default(10)
+// @Param sortBy query string false "Sort field"
+// @Param sortOrder query string false "Sort order (asc/desc)" default(asc)
+// @Success 200 {object} domain.ListResult[domain.Rule]
+// @Failure 500 {object} map[string]string
+// @Router /rules [get]
 func (handler *RuleHandler) List(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	opts := httpx.ParseListOptions(fiberCtx, orgID)

@@ -14,10 +14,10 @@ func ParseListOptions(parser *fiber.Ctx, orgID string) domain.ListOptions {
 		Filter: map[string]string{"orgId": orgID},
 	}
 
-	// Parse pagination
-	page := 1
+	// Parse pagination (0-based)
+	page := 0
 	if pageStr := parser.Query("page"); pageStr != "" {
-		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		if p, err := strconv.Atoi(pageStr); err == nil && p >= 0 {
 			page = p
 		}
 	}

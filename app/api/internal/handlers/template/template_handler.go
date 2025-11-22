@@ -32,6 +32,17 @@ type templateRequest struct {
 	Metadata     map[string]string                 `json:"metadata,omitempty"`
 }
 
+// CreateTemplate godoc
+// @Summary Create a new template
+// @Tags templates
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param template body templateRequest true "Template data"
+// @Success 201 {object} domain.Template
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /templates [post]
 func (handler *TemplateHandler) Create(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	var body templateRequest
@@ -103,6 +114,19 @@ func validateTemplateContent(channel domain.ChannelType, content domain.Template
 	return nil
 }
 
+// GetTemplate godoc
+// @Summary Get a template by ID
+// @Tags templates
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Template ID"
+// @Param language query string false "Language code for translation"
+// @Success 200 {object} domain.Template
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /templates/{id} [get]
 func (handler *TemplateHandler) Get(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	templateID := fiberCtx.Params("id")
@@ -131,6 +155,19 @@ func (handler *TemplateHandler) Get(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.JSON(template)
 }
 
+// UpdateTemplate godoc
+// @Summary Update a template (merge patch)
+// @Tags templates
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Template ID"
+// @Param template body object true "Template patch data"
+// @Success 200 {object} domain.Template
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /templates/{id} [put]
 func (handler *TemplateHandler) Update(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	templateID := fiberCtx.Params("id")
@@ -161,6 +198,18 @@ func (handler *TemplateHandler) Update(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.JSON(existing)
 }
 
+// DeleteTemplate godoc
+// @Summary Delete a template
+// @Tags templates
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Template ID"
+// @Success 204
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /templates/{id} [delete]
 func (handler *TemplateHandler) Delete(fiberCtx *fiber.Ctx) error {
 	orgID := middlewares.OrgIDFromCtx(fiberCtx)
 	templateID := fiberCtx.Params("id")

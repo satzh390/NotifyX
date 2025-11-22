@@ -351,8 +351,8 @@ func buildBsonSort(opts domain.ListOptions, defaultSort map[string]int) bson.D {
 }
 
 func pageOrDefaultParam(opts domain.ListOptions) (page int, pageSize int) {
-	// Set default pagination if not provided
-	page = max(1, opts.Pagination.Page)
+	// Set default pagination if not provided (0-based)
+	page = max(0, opts.Pagination.Page)
 	pageSize = opts.Pagination.PageSize
 	if pageSize < 1 {
 		pageSize = 20 // default page size

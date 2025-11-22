@@ -193,7 +193,7 @@ func TestGroupHandler_List(t *testing.T) {
 			{ID: "group-2", OrgID: "test-org", Name: "Group 2"},
 		},
 		Pagination: domain.PaginationResult{
-			Page:       1,
+			Page:       0,
 			PageSize:   20,
 			TotalCount: 2,
 			TotalPages: 1,
@@ -201,10 +201,10 @@ func TestGroupHandler_List(t *testing.T) {
 	}
 
 	store.On("List", mock.Anything, mock.MatchedBy(func(opts domain.ListOptions) bool {
-		return opts.Pagination.Page == 1 && opts.Pagination.PageSize == 20
+		return opts.Pagination.Page == 0 && opts.Pagination.PageSize == 20
 	})).Return(expectedResult, nil).Once()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?page=1&pageSize=20", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?page=0&pageSize=20", nil)
 	resp, err := app.Test(req)
 
 	assert.NoError(t, err)
@@ -227,7 +227,7 @@ func TestGroupHandler_List_WithSorting(t *testing.T) {
 			{ID: "group-2", OrgID: "test-org", Name: "B Group"},
 		},
 		Pagination: domain.PaginationResult{
-			Page:       1,
+			Page:       0,
 			PageSize:   20,
 			TotalCount: 2,
 			TotalPages: 1,
