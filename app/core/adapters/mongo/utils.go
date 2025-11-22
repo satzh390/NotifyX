@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/notifyx/core"
+	"github.com/notifyx/core/domain"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -45,4 +46,63 @@ func BuildUpdateMap[T any](doc T) (bson.M, error) {
 	}
 
 	return result, nil
+}
+
+func BuildBsonFilter(opts domain.ListOptions) bson.M {
+	filter := bson.M{}
+	for key, value := range opts.Filter {
+		if value != "" {
+			filter[key] = value
+		}
+	}
+
+	return filter
+}
+
+func BuildBsonSort(opts domain.ListOptions, defaultSort map[string]int) bson.D {
+	sortMap := make(map[string]int)
+	for k, v := range defaultSort {
+		sortMap[k] = v
+	}
+
+	for _, s := range opts.SortBy {
+		order := 1
+		if s.Order == domain.SortDesc {
+			order = -1
+		}
+		sortMap[s.Field] = order
+	}
+
+	// Build bson.D in correct order:
+	// 1. User-specified fields (in order provided)
+	finalSort := bson.D{}
+	used := map[string]bool{}
+	for _, s := range opts.SortBy {
+		finalSort = append(finalSort, bson.E{
+			Key:   s.Field,
+			Value: sortMap[s.Field],
+		})
+		used[s.Field] = true
+	}
+
+	// 2. Default fields not specified by user
+	for k, v := range defaultSort {
+		if !used[k] {
+			finalSort = append(finalSort, bson.E{Key: k, Value: v})
+		}
+	}
+
+	return finalSort
+}
+
+func PageOrDefaultParam(opts domain.ListOptions) (page int, pageSize int) {
+	// Set default pagination if not provided (0-based)
+	page = max(0, opts.Pagination.Page)
+	pageSize = opts.Pagination.PageSize
+	if pageSize < 1 {
+		pageSize = 20 // default page size
+	}
+
+	pageSize = min(100, pageSize)
+	return
 }
