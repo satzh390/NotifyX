@@ -48,7 +48,8 @@ func setupGroupIntegrationApp(t *testing.T) (*fiber.App, func()) {
 	groups := api.Group("/groups")
 	groups.Post("", groupHandler.Create)
 	groups.Get("/:id", groupHandler.Get)
-	groups.Put("/:id", groupHandler.Update)
+	groups.Put("/:id", groupHandler.Put)
+	groups.Patch("/:id", groupHandler.Patch)
 	groups.Delete("/:id", groupHandler.Delete)
 	groups.Get("", groupHandler.List)
 

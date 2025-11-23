@@ -151,6 +151,76 @@ func TestIntegration_Rule_Update(t *testing.T) {
 	}
 }
 
+func TestIntegration_Rule_Patch(t *testing.T) {
+	app, cleanup := setupRuleIntegrationApp(t)
+	defer cleanup()
+
+	// Create a rule first
+	ctx := context.Background()
+	stores, _, _ := mongoadapter.NewStoreSet(ctx, mongoadapter.Options{
+		URI:      "mongodb://localhost:27017",
+		Database: "notifyx_test",
+	})
+
+	eventType := "order.created"
+	rule := domain.Rule{
+		EventType: eventType,
+		OrgID:     "test-org-integration",
+		Channels:  []domain.ChannelType{domain.ChannelEmail},
+		CreatedAt: time.Now(),
+	}
+	if err := stores.Rules.Put(ctx, rule); err != nil {
+		t.Fatalf("Failed to create rule: %v", err)
+	}
+
+	// Patch the rule
+	patchBody := map[string]interface{}{
+		"channels": []string{"email", "sms"},
+	}
+	patchJSON, _ := json.Marshal(patchBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/rules/"+eventType, bytes.NewReader(patchJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("Patch request failed: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	var patched domain.Rule
+	if err := json.NewDecoder(resp.Body).Decode(&patched); err != nil {
+		t.Fatalf("Failed to decode patch response: %v", err)
+	}
+
+	if len(patched.Channels) != 2 {
+		t.Errorf("Expected 2 channels, got %d", len(patched.Channels))
+	}
+}
+
+func TestIntegration_Rule_Patch_NotFound(t *testing.T) {
+	app, cleanup := setupRuleIntegrationApp(t)
+	defer cleanup()
+
+	patchBody := map[string]interface{}{
+		"channels": []string{"email", "sms"},
+	}
+	patchJSON, _ := json.Marshal(patchBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/rules/non-existent", bytes.NewReader(patchJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("Patch request failed: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", resp.StatusCode)
+	}
+}
+
 func TestIntegration_Rule_Delete(t *testing.T) {
 	app, cleanup := setupRuleIntegrationApp(t)
 	defer cleanup()

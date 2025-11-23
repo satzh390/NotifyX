@@ -48,7 +48,8 @@ func setupSubscriberIntegrationApp(t *testing.T) (*fiber.App, func()) {
 	subscribers := api.Group("/subscribers")
 	subscribers.Post("", subHandler.Create)
 	subscribers.Get("/:id", subHandler.Get)
-	subscribers.Put("/:id", subHandler.Update)
+	subscribers.Put("/:id", subHandler.Put)
+	subscribers.Patch("/:id", subHandler.Patch)
 	subscribers.Delete("/:id", subHandler.Delete)
 	subscribers.Get("", subHandler.List)
 

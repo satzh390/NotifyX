@@ -48,7 +48,8 @@ func setupTemplateIntegrationApp(t *testing.T) (*fiber.App, func()) {
 	templates := api.Group("/templates")
 	templates.Post("", templateHandler.Create)
 	templates.Get("/:id", templateHandler.Get)
-	templates.Put("/:id", templateHandler.Update)
+	templates.Put("/:id", templateHandler.Put)
+	templates.Patch("/:id", templateHandler.Patch)
 	templates.Delete("/:id", templateHandler.Delete)
 
 	return app, cleanup

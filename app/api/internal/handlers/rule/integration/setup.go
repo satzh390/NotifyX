@@ -48,7 +48,8 @@ func setupRuleIntegrationApp(t *testing.T) (*fiber.App, func()) {
 	rules := api.Group("/rules")
 	rules.Post("", ruleHandler.Create)
 	rules.Get("/:eventType", ruleHandler.Get)
-	rules.Put("/:eventType", ruleHandler.Update)
+	rules.Put("/:eventType", ruleHandler.Put)
+	rules.Patch("/:eventType", ruleHandler.Patch)
 	rules.Delete("/:eventType", ruleHandler.Delete)
 	rules.Get("", ruleHandler.List)
 

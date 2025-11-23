@@ -157,6 +157,80 @@ func TestIntegration_Group_Update(t *testing.T) {
 	}
 }
 
+func TestIntegration_Group_Patch(t *testing.T) {
+	app, cleanup := setupGroupIntegrationApp(t)
+	defer cleanup()
+
+	// Create a group first
+	ctx := context.Background()
+	stores, _, _ := mongoadapter.NewStoreSet(ctx, mongoadapter.Options{
+		URI:      "mongodb://localhost:27017",
+		Database: "notifyx_test",
+	})
+
+	groupID := uuid.NewString()
+	group := domain.Group{
+		ID:    groupID,
+		OrgID: "test-org-integration",
+		Name:  "Old Name",
+		Description: "Old Description",
+	}
+	if err := stores.Groups.Put(ctx, group); err != nil {
+		t.Fatalf("Failed to create group: %v", err)
+	}
+
+	// Patch the group
+	patchBody := map[string]interface{}{
+		"name": "New Name",
+	}
+	patchJSON, _ := json.Marshal(patchBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/groups/"+groupID, bytes.NewReader(patchJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("Patch request failed: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	var patched domain.Group
+	if err := json.NewDecoder(resp.Body).Decode(&patched); err != nil {
+		t.Fatalf("Failed to decode patch response: %v", err)
+	}
+
+	if patched.Name != "New Name" {
+		t.Errorf("Expected name New Name, got %s", patched.Name)
+	}
+	// Description should remain unchanged
+	if patched.Description != "Old Description" {
+		t.Errorf("Expected description Old Description, got %s", patched.Description)
+	}
+}
+
+func TestIntegration_Group_Patch_NotFound(t *testing.T) {
+	app, cleanup := setupGroupIntegrationApp(t)
+	defer cleanup()
+
+	patchBody := map[string]interface{}{
+		"name": "New Name",
+	}
+	patchJSON, _ := json.Marshal(patchBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/groups/non-existent", bytes.NewReader(patchJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("Patch request failed: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", resp.StatusCode)
+	}
+}
+
 func TestIntegration_Group_Delete(t *testing.T) {
 	app, cleanup := setupGroupIntegrationApp(t)
 	defer cleanup()

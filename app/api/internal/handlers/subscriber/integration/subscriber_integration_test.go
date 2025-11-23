@@ -167,6 +167,81 @@ func TestIntegration_Subscriber_Update(t *testing.T) {
 	}
 }
 
+func TestIntegration_Subscriber_Patch(t *testing.T) {
+	app, cleanup := setupSubscriberIntegrationApp(t)
+	defer cleanup()
+
+	// Create a subscriber first
+	ctx := context.Background()
+	stores, _, _ := mongoadapter.NewStoreSet(ctx, mongoadapter.Options{
+		URI:      "mongodb://localhost:27017",
+		Database: "notifyx_test",
+	})
+
+	subID := uuid.NewString()
+	sub := domain.Subscriber{
+		ID:        subID,
+		OrgID:     "test-org-integration",
+		Email:     "old@example.com",
+		Phone:     "1234567890",
+		CreatedAt: time.Now(),
+	}
+	if err := stores.Subscribers.Put(ctx, sub); err != nil {
+		t.Fatalf("Failed to create subscriber: %v", err)
+	}
+
+	// Patch the subscriber
+	patchBody := map[string]interface{}{
+		"email": "new@example.com",
+	}
+	patchJSON, _ := json.Marshal(patchBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/subscribers/"+subID, bytes.NewReader(patchJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("Patch request failed: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	var patched domain.Subscriber
+	if err := json.NewDecoder(resp.Body).Decode(&patched); err != nil {
+		t.Fatalf("Failed to decode patch response: %v", err)
+	}
+
+	if patched.Email != "new@example.com" {
+		t.Errorf("Expected email new@example.com, got %s", patched.Email)
+	}
+	// Phone should remain unchanged
+	if patched.Phone != "1234567890" {
+		t.Errorf("Expected phone 1234567890, got %s", patched.Phone)
+	}
+}
+
+func TestIntegration_Subscriber_Patch_NotFound(t *testing.T) {
+	app, cleanup := setupSubscriberIntegrationApp(t)
+	defer cleanup()
+
+	patchBody := map[string]interface{}{
+		"email": "new@example.com",
+	}
+	patchJSON, _ := json.Marshal(patchBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/subscribers/non-existent", bytes.NewReader(patchJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("Patch request failed: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", resp.StatusCode)
+	}
+}
+
 func TestIntegration_Subscriber_Delete(t *testing.T) {
 	app, cleanup := setupSubscriberIntegrationApp(t)
 	defer cleanup()

@@ -153,6 +153,85 @@ func TestIntegration_Template_Update(t *testing.T) {
 	}
 }
 
+func TestIntegration_Template_Patch(t *testing.T) {
+	app, cleanup := setupTemplateIntegrationApp(t)
+	defer cleanup()
+
+	// Create a template first
+	stores, _, _ := setupIntegrationTest(t)
+	ctx := context.Background()
+
+	templateID := uuid.NewString()
+	template := domain.Template{
+		ID:      templateID,
+		OrgID:   "test-org-integration",
+		Name:    "Old Name",
+		Channel: domain.ChannelEmail,
+		Content: domain.TemplateContent{
+			Body:    "Old body",
+			Subject: "Old subject",
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	if err := stores.Templates.Put(ctx, template); err != nil {
+		t.Fatalf("Failed to create template: %v", err)
+	}
+
+	// Patch the template
+	patchBody := map[string]interface{}{
+		"name": "New Name",
+		"content": map[string]interface{}{
+			"body": "New body",
+		},
+	}
+	patchJSON, _ := json.Marshal(patchBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/templates/"+templateID, bytes.NewReader(patchJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("Patch request failed: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	var patched domain.Template
+	if err := json.NewDecoder(resp.Body).Decode(&patched); err != nil {
+		t.Fatalf("Failed to decode patch response: %v", err)
+	}
+
+	if patched.Name != "New Name" {
+		t.Errorf("Expected name New Name, got %s", patched.Name)
+	}
+	if patched.Content.Body != "New body" {
+		t.Errorf("Expected body New body, got %s", patched.Content.Body)
+	}
+}
+
+func TestIntegration_Template_Patch_NotFound(t *testing.T) {
+	app, cleanup := setupTemplateIntegrationApp(t)
+	defer cleanup()
+
+	patchBody := map[string]interface{}{
+		"name": "New Name",
+	}
+	patchJSON, _ := json.Marshal(patchBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/templates/non-existent", bytes.NewReader(patchJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("Patch request failed: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", resp.StatusCode)
+	}
+}
+
 func TestIntegration_Template_Delete(t *testing.T) {
 	app, cleanup := setupTemplateIntegrationApp(t)
 	defer cleanup()
