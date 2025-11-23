@@ -125,7 +125,9 @@ func TestIntegration_Template_Update(t *testing.T) {
 
 	// Update the template
 	updateBody := map[string]interface{}{
-		"name": "New Name",
+		"id":      templateID,
+		"name":    "New Name",
+		"channel": "email",
 		"content": map[string]interface{}{
 			"body": "New body",
 		},

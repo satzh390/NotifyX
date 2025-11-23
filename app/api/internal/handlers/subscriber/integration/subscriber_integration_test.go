@@ -142,7 +142,8 @@ func TestIntegration_Subscriber_Update(t *testing.T) {
 
 	// Update the subscriber
 	updateBody := map[string]interface{}{
-		"email": "updated@example.com",
+		"subscriberId": subID,
+		"email":        "updated@example.com",
 	}
 	updateJSON, _ := json.Marshal(updateBody)
 

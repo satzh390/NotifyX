@@ -132,7 +132,8 @@ func TestIntegration_Group_Update(t *testing.T) {
 
 	// Update the group
 	updateBody := map[string]interface{}{
-		"name": "Updated Group Name",
+		"groupId": groupID,
+		"name":    "Updated Group Name",
 	}
 	updateJSON, _ := json.Marshal(updateBody)
 
@@ -170,9 +171,9 @@ func TestIntegration_Group_Patch(t *testing.T) {
 
 	groupID := uuid.NewString()
 	group := domain.Group{
-		ID:    groupID,
-		OrgID: "test-org-integration",
-		Name:  "Old Name",
+		ID:          groupID,
+		OrgID:       "test-org-integration",
+		Name:        "Old Name",
 		Description: "Old Description",
 	}
 	if err := stores.Groups.Put(ctx, group); err != nil {

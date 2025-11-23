@@ -135,7 +135,8 @@ func TestIntegration_Rule_Update(t *testing.T) {
 
 	// Update the rule
 	updateBody := map[string]interface{}{
-		"channels": []string{"email", "sms"},
+		"eventType": eventType,
+		"channels":  []string{"email", "sms"},
 	}
 	updateJSON, _ := json.Marshal(updateBody)
 
