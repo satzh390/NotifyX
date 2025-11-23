@@ -29,7 +29,8 @@ func setupGroupTestApp() (*fiber.App, *MockGroupStore) {
 	groups := api.Group("/groups")
 	groups.Post("", handler.Create)
 	groups.Get("/:id", handler.Get)
-	groups.Put("/:id", handler.Update)
+	groups.Put("/:id", handler.Put)
+	groups.Patch("/:id", handler.Patch)
 	groups.Delete("/:id", handler.Delete)
 	groups.Get("", handler.List)
 
@@ -126,7 +127,7 @@ func TestGroupHandler_Get_NotFound(t *testing.T) {
 	store.AssertExpectations(t)
 }
 
-func TestGroupHandler_Update(t *testing.T) {
+func TestGroupHandler_Put(t *testing.T) {
 	app, store := setupGroupTestApp()
 
 	groupID := uuid.NewString()
@@ -136,19 +137,20 @@ func TestGroupHandler_Update(t *testing.T) {
 		Name:  "Old Name",
 	}
 
-	// Mock Get to return existing group
+	// Test PUT with existing group (update)
 	store.On("Get", mock.Anything, "test-org", groupID).Return(existingGroup, nil).Once()
-	// Mock Put to update the group
 	store.On("Put", mock.Anything, mock.MatchedBy(func(g domain.Group) bool {
 		return g.ID == groupID && g.Name == "New Name"
 	})).Return(nil).Once()
 
-	patch := map[string]interface{}{
-		"name": "New Name",
+	fullBody := map[string]interface{}{
+		"groupId":     groupID,
+		"name":        "New Name",
+		"description": "New Description",
 	}
-	patchJSON, _ := json.Marshal(patch)
+	bodyJSON, _ := json.Marshal(fullBody)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/groups/"+groupID, bytes.NewReader(patchJSON))
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/groups/"+groupID, bytes.NewReader(bodyJSON))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 
@@ -159,6 +161,90 @@ func TestGroupHandler_Update(t *testing.T) {
 	err = json.NewDecoder(resp.Body).Decode(&updated)
 	assert.NoError(t, err)
 	assert.Equal(t, "New Name", updated.Name)
+
+	store.AssertExpectations(t)
+}
+
+func TestGroupHandler_Put_Create(t *testing.T) {
+	app, store := setupGroupTestApp()
+
+	groupID := uuid.NewString()
+
+	// Test PUT with non-existing group (create)
+	store.On("Get", mock.Anything, "test-org", groupID).Return(domain.Group{}, storage.ErrNotFound).Once()
+	store.On("Put", mock.Anything, mock.MatchedBy(func(g domain.Group) bool {
+		return g.ID == groupID && g.Name == "New Group"
+	})).Return(nil).Once()
+
+	fullBody := map[string]interface{}{
+		"groupId": groupID,
+		"name":    "New Group",
+	}
+	bodyJSON, _ := json.Marshal(fullBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/groups/"+groupID, bytes.NewReader(bodyJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	store.AssertExpectations(t)
+}
+
+func TestGroupHandler_Patch(t *testing.T) {
+	app, store := setupGroupTestApp()
+
+	groupID := uuid.NewString()
+	existingGroup := domain.Group{
+		ID:    groupID,
+		OrgID: "test-org",
+		Name:  "Old Name",
+	}
+
+	store.On("Get", mock.Anything, "test-org", groupID).Return(existingGroup, nil).Once()
+	store.On("Put", mock.Anything, mock.MatchedBy(func(g domain.Group) bool {
+		return g.ID == groupID && g.Name == "New Name"
+	})).Return(nil).Once()
+
+	patch := map[string]interface{}{
+		"name": "New Name",
+	}
+	patchJSON, _ := json.Marshal(patch)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/groups/"+groupID, bytes.NewReader(patchJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var updated domain.Group
+	err = json.NewDecoder(resp.Body).Decode(&updated)
+	assert.NoError(t, err)
+	assert.Equal(t, "New Name", updated.Name)
+
+	store.AssertExpectations(t)
+}
+
+func TestGroupHandler_Patch_NotFound(t *testing.T) {
+	app, store := setupGroupTestApp()
+
+	groupID := uuid.NewString()
+
+	store.On("Get", mock.Anything, "test-org", groupID).Return(domain.Group{}, storage.ErrNotFound).Once()
+
+	patch := map[string]interface{}{
+		"name": "New Name",
+	}
+	patchJSON, _ := json.Marshal(patch)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/groups/"+groupID, bytes.NewReader(patchJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 	store.AssertExpectations(t)
 }

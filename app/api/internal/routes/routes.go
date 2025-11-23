@@ -27,7 +27,10 @@ func RegisterRoutes(app *fiber.App, stores storage.Stores, validator httpx.AuthV
 	subscribers.Get("/:id", subscriberHandler.Get)
 	subscribers.Put("/:id",
 		httpx.RequireAuth(validator, notifyWritePermission),
-		subscriberHandler.Update)
+		subscriberHandler.Put)
+	subscribers.Patch("/:id",
+		httpx.RequireAuth(validator, notifyWritePermission),
+		subscriberHandler.Patch)
 	subscribers.Delete("/:id", httpx.RequireAuth(validator, notifyWritePermission), subscriberHandler.Delete)
 	subscribers.Get("", subscriberHandler.List)
 
@@ -40,7 +43,10 @@ func RegisterRoutes(app *fiber.App, stores storage.Stores, validator httpx.AuthV
 	groups.Get("/:id", groupHandler.Get)
 	groups.Put("/:id",
 		httpx.RequireAuth(validator, notifyWritePermission),
-		groupHandler.Update)
+		groupHandler.Put)
+	groups.Patch("/:id",
+		httpx.RequireAuth(validator, notifyWritePermission),
+		groupHandler.Patch)
 	groups.Delete("/:id", httpx.RequireAuth(validator, notifyWritePermission), groupHandler.Delete)
 	groups.Get("", groupHandler.List)
 
@@ -53,7 +59,10 @@ func RegisterRoutes(app *fiber.App, stores storage.Stores, validator httpx.AuthV
 	rules.Get("/:eventType", ruleHandler.Get)
 	rules.Put("/:eventType",
 		httpx.RequireAuth(validator, notifyWritePermission),
-		ruleHandler.Update)
+		ruleHandler.Put)
+	rules.Patch("/:eventType",
+		httpx.RequireAuth(validator, notifyWritePermission),
+		ruleHandler.Patch)
 	rules.Delete("/:eventType", httpx.RequireAuth(validator, notifyWritePermission), ruleHandler.Delete)
 	rules.Get("", ruleHandler.List)
 
@@ -66,6 +75,9 @@ func RegisterRoutes(app *fiber.App, stores storage.Stores, validator httpx.AuthV
 	templates.Get("/:id", templateHandler.Get)
 	templates.Put("/:id",
 		httpx.RequireAuth(validator, notifyWritePermission),
-		templateHandler.Update)
+		templateHandler.Put)
+	templates.Patch("/:id",
+		httpx.RequireAuth(validator, notifyWritePermission),
+		templateHandler.Patch)
 	templates.Delete("/:id", httpx.RequireAuth(validator, notifyWritePermission), templateHandler.Delete)
 }

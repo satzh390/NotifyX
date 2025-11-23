@@ -31,7 +31,8 @@ func setupSubscriberTestApp() (*fiber.App, *MockSubscriberStore) {
 	subscribers := api.Group("/subscribers")
 	subscribers.Post("", handler.Create)
 	subscribers.Get("/:id", handler.Get)
-	subscribers.Put("/:id", handler.Update)
+	subscribers.Put("/:id", handler.Put)
+	subscribers.Patch("/:id", handler.Patch)
 	subscribers.Delete("/:id", handler.Delete)
 	subscribers.Get("", handler.List)
 
@@ -155,7 +156,91 @@ func TestSubscriberHandler_Get_NotFound(t *testing.T) {
 	store.AssertExpectations(t)
 }
 
-func TestSubscriberHandler_Update(t *testing.T) {
+func TestSubscriberHandler_Put(t *testing.T) {
+	app, store := setupSubscriberTestApp()
+
+	subID := uuid.NewString()
+	existingSubscriber := domain.Subscriber{
+		ID:        subID,
+		OrgID:     "test-org",
+		Email:     "old@example.com",
+		CreatedAt: time.Now(),
+	}
+
+	// Test PUT with existing subscriber (update)
+	store.On("Get", mock.Anything, "test-org", subID).Return(existingSubscriber, nil).Once()
+	store.On("Put", mock.Anything, mock.MatchedBy(func(s domain.Subscriber) bool {
+		return s.ID == subID && s.Email == "new@example.com"
+	})).Return(nil).Once()
+	store.On("Get", mock.Anything, "test-org", subID).Return(domain.Subscriber{
+		ID:        subID,
+		OrgID:     "test-org",
+		Email:     "new@example.com",
+		CreatedAt: existingSubscriber.CreatedAt,
+	}, nil).Once()
+
+	fullBody := map[string]interface{}{
+		"subscriberId": subID,
+		"email":        "new@example.com",
+		"preferences": map[string]interface{}{
+			"channels": map[string]bool{"email": true},
+			"language": "en",
+		},
+	}
+	bodyJSON, _ := json.Marshal(fullBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/subscribers/"+subID, bytes.NewReader(bodyJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var updated domain.Subscriber
+	err = json.NewDecoder(resp.Body).Decode(&updated)
+	assert.NoError(t, err)
+	assert.Equal(t, "new@example.com", updated.Email)
+
+	store.AssertExpectations(t)
+}
+
+func TestSubscriberHandler_Put_Create(t *testing.T) {
+	app, store := setupSubscriberTestApp()
+
+	subID := uuid.NewString()
+
+	// Test PUT with non-existing subscriber (create)
+	store.On("Get", mock.Anything, "test-org", subID).Return(domain.Subscriber{}, storage.ErrNotFound).Once()
+	store.On("Put", mock.Anything, mock.MatchedBy(func(s domain.Subscriber) bool {
+		return s.ID == subID && s.Email == "new@example.com"
+	})).Return(nil).Once()
+	store.On("Get", mock.Anything, "test-org", subID).Return(domain.Subscriber{
+		ID:    subID,
+		OrgID: "test-org",
+		Email: "new@example.com",
+	}, nil).Once()
+
+	fullBody := map[string]interface{}{
+		"subscriberId": subID,
+		"email":        "new@example.com",
+		"preferences": map[string]interface{}{
+			"channels": map[string]bool{"email": true},
+			"language": "en",
+		},
+	}
+	bodyJSON, _ := json.Marshal(fullBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/subscribers/"+subID, bytes.NewReader(bodyJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	store.AssertExpectations(t)
+}
+
+func TestSubscriberHandler_Patch(t *testing.T) {
 	app, store := setupSubscriberTestApp()
 
 	subID := uuid.NewString()
@@ -175,7 +260,7 @@ func TestSubscriberHandler_Update(t *testing.T) {
 	}
 	patchJSON, _ := json.Marshal(patch)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/subscribers/"+subID, bytes.NewReader(patchJSON))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/subscribers/"+subID, bytes.NewReader(patchJSON))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 
@@ -190,7 +275,29 @@ func TestSubscriberHandler_Update(t *testing.T) {
 	store.AssertExpectations(t)
 }
 
-func TestSubscriberHandler_Update_ValidationError(t *testing.T) {
+func TestSubscriberHandler_Patch_NotFound(t *testing.T) {
+	app, store := setupSubscriberTestApp()
+
+	subID := uuid.NewString()
+
+	store.On("Get", mock.Anything, "test-org", subID).Return(domain.Subscriber{}, storage.ErrNotFound).Once()
+
+	patch := map[string]interface{}{
+		"email": "new@example.com",
+	}
+	patchJSON, _ := json.Marshal(patch)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/subscribers/"+subID, bytes.NewReader(patchJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	store.AssertExpectations(t)
+}
+
+func TestSubscriberHandler_Patch_ValidationError(t *testing.T) {
 	app, _ := setupSubscriberTestApp()
 
 	subID := uuid.NewString()
@@ -216,7 +323,7 @@ func TestSubscriberHandler_Update_ValidationError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bodyJSON, _ := json.Marshal(tt.body)
-			req := httptest.NewRequest(http.MethodPut, "/api/v1/subscribers/"+subID, bytes.NewReader(bodyJSON))
+			req := httptest.NewRequest(http.MethodPatch, "/api/v1/subscribers/"+subID, bytes.NewReader(bodyJSON))
 			req.Header.Set("Content-Type", "application/json")
 			resp, err := app.Test(req)
 

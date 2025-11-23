@@ -20,10 +20,22 @@ func NewGroupHandler(store storage.GroupStore) *GroupHandler {
 }
 
 type GroupRequest struct {
-	// GroupID - optional, will be auto-generated if not provided
-	GroupID string `json:"groupId"`
+	// GroupID - required for PUT, optional for POST (will be auto-generated if not provided)
+	GroupID string `json:"groupId" example:"group-123"`
 	// Name is required - the name of the group
 	Name string `json:"name" validate:"required" example:"VIP Customers"`
+	// Description - optional description of the group
+	Description string `json:"description"`
+	// Subscribers - list of subscriber IDs in this group
+	Subscribers []string `json:"subscribers"`
+	// Metadata - optional key-value pairs for additional data
+	Metadata map[string]string `json:"metadata"`
+}
+
+// GroupPatchRequest is used for PATCH requests - only mutable fields, no required validation
+type GroupPatchRequest struct {
+	// Name - optional, the name of the group
+	Name string `json:"name" example:"VIP Customers"`
 	// Description - optional description of the group
 	Description string `json:"description"`
 	// Subscribers - list of subscriber IDs in this group
@@ -101,24 +113,90 @@ func (handler *GroupHandler) Get(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.JSON(group)
 }
 
-// UpdateGroup godoc
-// @Summary Update a group (merge patch)
+// PutGroup godoc
+// @Summary Create or update a group (full object)
 // @Tags groups
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Group ID"
-// @Param group body object true "Group patch data"
-// @Success 200 {object} domain.Group
+// @Param group body GroupRequest true "Group data (all fields including groupId and name required)"
+// @Success 200 {object} domain.Group "Updated group"
+// @Success 201 {object} domain.Group "Created group"
 // @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /groups/{id} [put]
-func (handler *GroupHandler) Update(fiberCtx *fiber.Ctx) error {
+func (handler *GroupHandler) Put(fiberCtx *fiber.Ctx) error {
 	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	groupID := fiberCtx.Params("id")
 	if groupID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing group id")
+	}
+
+	body, err := httpx.ParseAndValidateBody[GroupRequest](fiberCtx)
+	if err != nil {
+		return err
+	}
+
+	// For PUT, groupId is required in the body
+	if body.GroupID == "" {
+		return fiber.NewError(http.StatusBadRequest, "groupId is required in request body")
+	}
+
+	// Ensure the ID in the path matches the ID in the body
+	if body.GroupID != groupID {
+		return fiber.NewError(http.StatusBadRequest, "group id in path must match group id in body")
+	}
+
+	// Check if group exists
+	_, err = handler.store.Get(context.Background(), orgID, groupID)
+	exists := err == nil
+
+	group := domain.Group{
+		ID:          groupID,
+		OrgID:       orgID,
+		Name:        body.Name,
+		Description: body.Description,
+		Subscribers: body.Subscribers,
+		Metadata:    body.Metadata,
+	}
+
+	if err := handler.store.Put(context.Background(), group); err != nil {
+		return fiber.NewError(http.StatusInternalServerError, err.Error())
+	}
+
+	statusCode := http.StatusOK
+	if !exists {
+		statusCode = http.StatusCreated
+	}
+
+	return fiberCtx.Status(statusCode).JSON(group)
+}
+
+// PatchGroup godoc
+// @Summary Partially update a group
+// @Tags groups
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Group ID"
+// @Param group body GroupPatchRequest true "Group patch data (only fields to update)"
+// @Success 200 {object} domain.Group
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /groups/{id} [patch]
+func (handler *GroupHandler) Patch(fiberCtx *fiber.Ctx) error {
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	groupID := fiberCtx.Params("id")
+	if groupID == "" {
+		return fiber.NewError(http.StatusBadRequest, "missing group id")
+	}
+
+	// Validate patch body and get raw bytes for merge patch
+	patchData, err := httpx.ValidatePatchBody[GroupPatchRequest](fiberCtx)
+	if err != nil {
+		return err
 	}
 
 	existing, err := handler.store.Get(context.Background(), orgID, groupID)
@@ -127,12 +205,6 @@ func (handler *GroupHandler) Update(fiberCtx *fiber.Ctx) error {
 			return fiber.NewError(http.StatusNotFound, "group not found")
 		}
 		return fiber.NewError(http.StatusInternalServerError, err.Error())
-	}
-
-	// Validate patch body and get raw bytes for merge patch
-	patchData, err := httpx.ValidatePatchBody[GroupRequest](fiberCtx)
-	if err != nil {
-		return err
 	}
 
 	// Apply merge patch

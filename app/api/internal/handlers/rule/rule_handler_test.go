@@ -28,7 +28,8 @@ func setupRuleTestApp() (*fiber.App, *MockRuleStore) {
 	rules := api.Group("/rules")
 	rules.Post("", handler.Create)
 	rules.Get("/:eventType", handler.Get)
-	rules.Put("/:eventType", handler.Update)
+	rules.Put("/:eventType", handler.Put)
+	rules.Patch("/:eventType", handler.Patch)
 	rules.Delete("/:eventType", handler.Delete)
 	rules.Get("", handler.List)
 
@@ -129,7 +130,78 @@ func TestRuleHandler_Get_NotFound(t *testing.T) {
 	store.AssertExpectations(t)
 }
 
-func TestRuleHandler_Update(t *testing.T) {
+func TestRuleHandler_Put(t *testing.T) {
+	app, store := setupRuleTestApp()
+
+	eventType := "order.created"
+	existingRule := domain.Rule{
+		EventType: eventType,
+		OrgID:     "test-org",
+		Channels:  []domain.ChannelType{domain.ChannelEmail},
+	}
+
+	// Test PUT with existing rule (update)
+	store.On("Get", mock.Anything, "test-org", eventType).Return(existingRule, nil).Once()
+	store.On("Put", mock.Anything, mock.MatchedBy(func(r domain.Rule) bool {
+		return r.EventType == eventType && len(r.Channels) == 2
+	})).Return(nil).Once()
+	store.On("Get", mock.Anything, "test-org", eventType).Return(domain.Rule{
+		EventType: eventType,
+		OrgID:     "test-org",
+		Channels:  []domain.ChannelType{domain.ChannelEmail, domain.ChannelSMS},
+	}, nil).Once()
+
+	fullBody := map[string]interface{}{
+		"eventType": eventType,
+		"channels":  []string{"email", "sms"},
+		"defaultRecipients": map[string]interface{}{
+			"subscriberIds": []string{"sub-1"},
+		},
+	}
+	bodyJSON, _ := json.Marshal(fullBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/rules/"+eventType, bytes.NewReader(bodyJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	store.AssertExpectations(t)
+}
+
+func TestRuleHandler_Put_Create(t *testing.T) {
+	app, store := setupRuleTestApp()
+
+	eventType := "order.created"
+
+	// Test PUT with non-existing rule (create)
+	store.On("Get", mock.Anything, "test-org", eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
+	store.On("Put", mock.Anything, mock.MatchedBy(func(r domain.Rule) bool {
+		return r.EventType == eventType
+	})).Return(nil).Once()
+	store.On("Get", mock.Anything, "test-org", eventType).Return(domain.Rule{
+		EventType: eventType,
+		OrgID:     "test-org",
+	}, nil).Once()
+
+	fullBody := map[string]interface{}{
+		"eventType": eventType,
+		"channels":  []string{"email"},
+	}
+	bodyJSON, _ := json.Marshal(fullBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/rules/"+eventType, bytes.NewReader(bodyJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	store.AssertExpectations(t)
+}
+
+func TestRuleHandler_Patch(t *testing.T) {
 	app, store := setupRuleTestApp()
 
 	eventType := "order.created"
@@ -145,17 +217,38 @@ func TestRuleHandler_Update(t *testing.T) {
 	})).Return(nil).Once()
 
 	patch := map[string]interface{}{
-		"eventType": eventType,
-		"channels":  []string{"email", "sms"},
+		"channels": []string{"email", "sms"},
 	}
 	patchJSON, _ := json.Marshal(patch)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/rules/"+eventType, bytes.NewReader(patchJSON))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/rules/"+eventType, bytes.NewReader(patchJSON))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	store.AssertExpectations(t)
+}
+
+func TestRuleHandler_Patch_NotFound(t *testing.T) {
+	app, store := setupRuleTestApp()
+
+	eventType := "order.created"
+
+	store.On("Get", mock.Anything, "test-org", eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
+
+	patch := map[string]interface{}{
+		"channels": []string{"email", "sms"},
+	}
+	patchJSON, _ := json.Marshal(patch)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/rules/"+eventType, bytes.NewReader(patchJSON))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 	store.AssertExpectations(t)
 }

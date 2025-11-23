@@ -20,8 +20,34 @@ func NewSubscriberHandler(store storage.SubscriberStore) *SubscriberHandler {
 }
 
 type SubscriberRequest struct {
-	// SubscriberID - optional, will be auto-generated if not provided
-	SubscriberID string `json:"subscriberId"`
+	// SubscriberID - required for PUT, optional for POST (will be auto-generated if not provided)
+	SubscriberID string `json:"subscriberId" example:"sub-123"`
+	// Email - optional, must be valid email format if provided
+	Email string `json:"email" validate:"omitempty,email" example:"user@example.com"`
+	// Phone - optional phone number
+	Phone string `json:"phone"`
+	// PushToken - optional push notification token
+	PushToken string `json:"pushToken"`
+	// WebhookURL - optional, must be valid URL format if provided
+	WebhookURL string `json:"webhookUrl" validate:"omitempty,url" example:"https://example.com/webhook"`
+	// Groups - list of group IDs this subscriber belongs to
+	Groups []string `json:"groups"`
+	// Metadata - optional key-value pairs for additional data
+	Metadata map[string]string `json:"metadata"`
+	// Preferences - subscriber notification preferences
+	Preferences struct {
+		Channels           map[domain.ChannelType]bool `json:"channels"`
+		Language           string                      `json:"language"`
+		AllowedDays        []string                    `json:"allowedDays"`
+		NotificationWindow struct {
+			Start string `json:"start"`
+			End   string `json:"end"`
+		} `json:"notificationWindow"`
+	} `json:"preferences"`
+}
+
+// SubscriberPatchRequest is used for PATCH requests - only mutable fields, no required validation
+type SubscriberPatchRequest struct {
 	// Email - optional, must be valid email format if provided
 	Email string `json:"email" validate:"omitempty,email" example:"user@example.com"`
 	// Phone - optional phone number
@@ -132,20 +158,97 @@ func (handler *SubscriberHandler) Get(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.JSON(subscriber)
 }
 
-// UpdateSubscriber godoc
-// @Summary Update a subscriber (merge patch)
+// PutSubscriber godoc
+// @Summary Create or update a subscriber (full object)
 // @Tags subscribers
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Subscriber ID"
-// @Param subscriber body object true "Subscriber patch data"
+// @Param subscriber body SubscriberRequest true "Subscriber data (all fields including subscriberId required)"
+// @Success 200 {object} domain.Subscriber "Updated subscriber"
+// @Success 201 {object} domain.Subscriber "Created subscriber"
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /subscribers/{id} [put]
+func (handler *SubscriberHandler) Put(fiberCtx *fiber.Ctx) error {
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	subscriberID := fiberCtx.Params("id")
+	if subscriberID == "" {
+		return fiber.NewError(http.StatusBadRequest, "missing subscriber id")
+	}
+
+	body, err := httpx.ParseAndValidateBody[SubscriberRequest](fiberCtx)
+	if err != nil {
+		return err
+	}
+
+	// For PUT, subscriberId is required in the body
+	if body.SubscriberID == "" {
+		return fiber.NewError(http.StatusBadRequest, "subscriberId is required in request body")
+	}
+
+	// Ensure the ID in the path matches the ID in the body
+	if body.SubscriberID != subscriberID {
+		return fiber.NewError(http.StatusBadRequest, "subscriber id in path must match subscriber id in body")
+	}
+
+	// Check if subscriber exists
+	_, err = handler.store.Get(context.Background(), orgID, subscriberID)
+	exists := err == nil
+
+	subscriber := domain.Subscriber{
+		ID:         subscriberID,
+		OrgID:      orgID,
+		Email:      body.Email,
+		Phone:      body.Phone,
+		PushToken:  body.PushToken,
+		WebhookURL: body.WebhookURL,
+		Groups:     body.Groups,
+		Metadata:   body.Metadata,
+		Preferences: domain.SubscriberPrefs{
+			Channels:    body.Preferences.Channels,
+			Language:    body.Preferences.Language,
+			AllowedDays: body.Preferences.AllowedDays,
+			NotificationWindow: domain.TimeWindow{
+				Start: body.Preferences.NotificationWindow.Start,
+				End:   body.Preferences.NotificationWindow.End,
+			},
+		},
+	}
+
+	if err := handler.store.Put(context.Background(), subscriber); err != nil {
+		return fiber.NewError(http.StatusInternalServerError, err.Error())
+	}
+
+	// Fetch the subscriber to get CreatedAt/UpdatedAt set by the store
+	updated, err := handler.store.Get(context.Background(), orgID, subscriberID)
+	if err != nil {
+		return fiber.NewError(http.StatusInternalServerError, "failed to retrieve subscriber: "+err.Error())
+	}
+
+	statusCode := http.StatusOK
+	if !exists {
+		statusCode = http.StatusCreated
+	}
+
+	return fiberCtx.Status(statusCode).JSON(updated)
+}
+
+// PatchSubscriber godoc
+// @Summary Partially update a subscriber
+// @Tags subscribers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Subscriber ID"
+// @Param subscriber body SubscriberPatchRequest true "Subscriber patch data (only fields to update)"
 // @Success 200 {object} domain.Subscriber
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /subscribers/{id} [put]
-func (handler *SubscriberHandler) Update(fiberCtx *fiber.Ctx) error {
+// @Router /subscribers/{id} [patch]
+func (handler *SubscriberHandler) Patch(fiberCtx *fiber.Ctx) error {
 	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	subscriberID := fiberCtx.Params("id")
 	if subscriberID == "" {
@@ -153,7 +256,7 @@ func (handler *SubscriberHandler) Update(fiberCtx *fiber.Ctx) error {
 	}
 
 	// Validate patch body and get raw bytes for merge patch
-	patchData, err := httpx.ValidatePatchBody[SubscriberRequest](fiberCtx)
+	patchData, err := httpx.ValidatePatchBody[SubscriberPatchRequest](fiberCtx)
 	if err != nil {
 		return err
 	}

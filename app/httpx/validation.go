@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -38,18 +37,12 @@ func ParseAndValidateBody[T any](fiberCtx *fiber.Ctx) (*T, error) {
 
 // ValidatePatchBody validates the patch body from raw bytes and returns the raw bytes for merge patch
 // This allows validation before applying merge patch while preserving the original JSON structure
-// For patches, only validates fields that are present (does not require missing fields)
+// PatchRequest types should not have required validation tags - it's the developer's responsibility
 func ValidatePatchBody[T any](fiberCtx *fiber.Ctx) ([]byte, error) {
 	// Get raw body bytes first (before parsing)
 	patchData := fiberCtx.Body()
 	if len(patchData) == 0 {
 		return nil, fiber.NewError(http.StatusBadRequest, "patch data is required")
-	}
-
-	// Parse into map to see what fields are present
-	var patchMap map[string]interface{}
-	if err := json.Unmarshal(patchData, &patchMap); err != nil {
-		return nil, fiber.NewError(http.StatusBadRequest, "invalid patch body: "+err.Error())
 	}
 
 	// Parse and validate the body from raw bytes
@@ -58,9 +51,8 @@ func ValidatePatchBody[T any](fiberCtx *fiber.Ctx) ([]byte, error) {
 		return nil, fiber.NewError(http.StatusBadRequest, "invalid patch body: "+err.Error())
 	}
 
-	// For patches, only validate fields that are present (skip required validation)
-	// Validate each field that exists in the patch using StructPartial
-	if err := validateStructPartial(&body, patchMap); err != nil {
+	// Validate struct (PatchRequest types don't have required tags, so this is safe)
+	if err := validate.Struct(&body); err != nil {
 		validationErrors := formatValidationErrors(err)
 		return nil, fiber.NewError(http.StatusBadRequest, validationErrors)
 	}
@@ -69,90 +61,6 @@ func ValidatePatchBody[T any](fiberCtx *fiber.Ctx) ([]byte, error) {
 	patchDataCopy := make([]byte, len(patchData))
 	copy(patchDataCopy, patchData)
 	return patchDataCopy, nil
-}
-
-// validateStructPartial validates only the fields present in the patch map
-// This allows partial validation for patch operations (doesn't require missing fields)
-func validateStructPartial(body interface{}, patchMap map[string]interface{}) error {
-	// Get the type and value of the body
-	bodyType := reflect.TypeOf(body)
-	if bodyType.Kind() == reflect.Ptr {
-		bodyType = bodyType.Elem()
-	}
-	bodyValue := reflect.ValueOf(body)
-	if bodyValue.Kind() == reflect.Ptr {
-		bodyValue = bodyValue.Elem()
-	}
-
-	// Build a map of JSON field names to struct field names
-	jsonToFieldMap := make(map[string]string)
-	for i := 0; i < bodyType.NumField(); i++ {
-		field := bodyType.Field(i)
-		jsonTag := field.Tag.Get("json")
-		if jsonTag != "" && jsonTag != "-" {
-			// Extract JSON field name (before comma)
-			jsonName := strings.Split(jsonTag, ",")[0]
-			if jsonName != "" {
-				jsonToFieldMap[jsonName] = field.Name
-			}
-		}
-	}
-
-	// Validate each field that exists in the patch
-	var validationErrors []error
-	for jsonFieldName := range patchMap {
-		fieldName, exists := jsonToFieldMap[jsonFieldName]
-		if !exists {
-			continue // Skip fields that don't exist in the struct
-		}
-
-		// Get the field value
-		fieldValue := bodyValue.FieldByName(fieldName)
-		if !fieldValue.IsValid() {
-			continue
-		}
-
-		// Get validation tag for this field
-		field, _ := bodyType.FieldByName(fieldName)
-		validateTag := field.Tag.Get("validate")
-		if validateTag == "" {
-			continue // No validation needed for this field
-		}
-
-		// Validate the field value (skip required validation by using Var instead of Struct)
-		// We'll manually check if "required" is in the tag and skip it for patches
-		if strings.Contains(validateTag, "required") {
-			// For patches, skip required validation - only validate format/type
-			// Remove "required" from the tag temporarily for validation
-			formatTag := strings.Replace(validateTag, "required,", "", -1)
-			formatTag = strings.Replace(formatTag, ",required", "", -1)
-			formatTag = strings.Replace(formatTag, "required", "", -1)
-			formatTag = strings.Trim(formatTag, ",")
-			if formatTag != "" {
-				if err := validate.Var(fieldValue.Interface(), formatTag); err != nil {
-					validationErrors = append(validationErrors, fmt.Errorf("%s: %w", fieldName, err))
-				}
-			}
-		} else {
-			// No required tag, validate normally
-			if err := validate.Var(fieldValue.Interface(), validateTag); err != nil {
-				validationErrors = append(validationErrors, fmt.Errorf("%s: %w", fieldName, err))
-			}
-		}
-	}
-
-	if len(validationErrors) > 0 {
-		// Combine all errors into a validator.ValidationErrors-like error
-		// Create a combined error message
-		var errMsgs []string
-		for _, err := range validationErrors {
-			errMsgs = append(errMsgs, err.Error())
-		}
-		// Return as a single error that can be formatted
-		return fmt.Errorf("%s", strings.Join(errMsgs, "; "))
-	}
-
-	return nil
 }
 
 // formatValidationErrors formats validator errors into a readable string

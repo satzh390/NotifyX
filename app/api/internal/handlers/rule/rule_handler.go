@@ -29,6 +29,16 @@ type RuleRequest struct {
 	TemplateRefs map[domain.ChannelType]string `json:"templateRefs"`
 }
 
+// RulePatchRequest is used for PATCH requests - only mutable fields, no required validation
+type RulePatchRequest struct {
+	// Channels - list of notification channels for this rule
+	Channels []domain.ChannelType `json:"channels"`
+	// DefaultRecipients - default recipients for this rule
+	DefaultRecipients domain.Recipients `json:"defaultRecipients"`
+	// TemplateRefs - template references by channel type
+	TemplateRefs map[domain.ChannelType]string `json:"templateRefs"`
+}
+
 // CreateRule godoc
 // @Summary Create a new rule
 // @Tags rules
@@ -98,24 +108,90 @@ func (handler *RuleHandler) Get(fiberCtx *fiber.Ctx) error {
 	return fiberCtx.JSON(rule)
 }
 
-// UpdateRule godoc
-// @Summary Update a rule (merge patch)
+// PutRule godoc
+// @Summary Create or update a rule (full object)
 // @Tags rules
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param eventType path string true "Event Type"
-// @Param rule body object true "Rule patch data"
-// @Success 200 {object} domain.Rule
+// @Param rule body RuleRequest true "Rule data (all fields including eventType required)"
+// @Success 200 {object} domain.Rule "Updated rule"
+// @Success 201 {object} domain.Rule "Created rule"
 // @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /rules/{eventType} [put]
-func (handler *RuleHandler) Update(fiberCtx *fiber.Ctx) error {
+func (handler *RuleHandler) Put(fiberCtx *fiber.Ctx) error {
 	orgID := httpx.OrgIDFromCtx(fiberCtx)
 	eventType := fiberCtx.Params("eventType")
 	if eventType == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing event type")
+	}
+
+	body, err := httpx.ParseAndValidateBody[RuleRequest](fiberCtx)
+	if err != nil {
+		return err
+	}
+
+	// Ensure the eventType in the path matches the eventType in the body
+	if body.EventType != eventType {
+		return fiber.NewError(http.StatusBadRequest, "event type in path must match event type in body")
+	}
+
+	// Check if rule exists
+	_, err = handler.store.Get(context.Background(), orgID, eventType)
+	exists := err == nil
+
+	rule := domain.Rule{
+		EventType:         eventType,
+		OrgID:             orgID,
+		Channels:          body.Channels,
+		DefaultRecipients: body.DefaultRecipients,
+		TemplateRefs:      body.TemplateRefs,
+	}
+
+	if err := handler.store.Put(context.Background(), rule); err != nil {
+		return fiber.NewError(http.StatusInternalServerError, err.Error())
+	}
+
+	// Fetch the rule to get CreatedAt/UpdatedAt set by the store
+	updated, err := handler.store.Get(context.Background(), orgID, eventType)
+	if err != nil {
+		return fiber.NewError(http.StatusInternalServerError, "failed to retrieve rule: "+err.Error())
+	}
+
+	statusCode := http.StatusOK
+	if !exists {
+		statusCode = http.StatusCreated
+	}
+
+	return fiberCtx.Status(statusCode).JSON(updated)
+}
+
+// PatchRule godoc
+// @Summary Partially update a rule
+// @Tags rules
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param eventType path string true "Event Type"
+// @Param rule body RulePatchRequest true "Rule patch data (only fields to update)"
+// @Success 200 {object} domain.Rule
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /rules/{eventType} [patch]
+func (handler *RuleHandler) Patch(fiberCtx *fiber.Ctx) error {
+	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	eventType := fiberCtx.Params("eventType")
+	if eventType == "" {
+		return fiber.NewError(http.StatusBadRequest, "missing event type")
+	}
+
+	// Validate patch body and get raw bytes for merge patch
+	patchData, err := httpx.ValidatePatchBody[RulePatchRequest](fiberCtx)
+	if err != nil {
+		return err
 	}
 
 	existing, err := handler.store.Get(context.Background(), orgID, eventType)
@@ -124,12 +200,6 @@ func (handler *RuleHandler) Update(fiberCtx *fiber.Ctx) error {
 			return fiber.NewError(http.StatusNotFound, "rule not found")
 		}
 		return fiber.NewError(http.StatusInternalServerError, err.Error())
-	}
-
-	// Validate patch body and get raw bytes for merge patch
-	patchData, err := httpx.ValidatePatchBody[RuleRequest](fiberCtx)
-	if err != nil {
-		return err
 	}
 
 	// Apply merge patch
