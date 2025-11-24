@@ -107,18 +107,21 @@ type Recipients struct {
 	SubscriberIDs []string `json:"subscriberIds" bson:"subscriberIds"`
 	Groups        []string `json:"groups" bson:"groups"`
 	Broadcast     bool     `json:"broadcast" bson:"broadcast"`
+	DirectEmails  []string `json:"directEmails,omitempty" bson:"directEmails,omitempty"`
+	DirectPhones  []string `json:"directPhones,omitempty" bson:"directPhones,omitempty"`
 }
 
 type DeliveryTask struct {
-	TaskID      string            `json:"taskId" bson:"taskId"`
-	EventID     string            `json:"eventId" bson:"eventId"`
-	OrgID       string            `json:"orgId" bson:"orgId"`
-	Subscriber  Subscriber        `json:"subscriber" bson:"subscriber"`
-	Channel     ChannelType       `json:"channel" bson:"channel"`
-	TemplateRef string            `json:"templateRef" bson:"templateRef"`
-	Payload     map[string]any    `json:"payload" bson:"payload"`
-	Metadata    map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
-	CreatedAt   time.Time         `json:"createdAt" bson:"createdAt"`
+	TaskID         string            `json:"taskId" bson:"taskId"`
+	IdempotencyKey string            `json:"idempotencyKey" bson:"idempotencyKey"`
+	EventID        string            `json:"eventId" bson:"eventId"`
+	OrgID          string            `json:"orgId" bson:"orgId"`
+	Subscriber     Subscriber        `json:"subscriber" bson:"subscriber"`
+	Channel        ChannelType       `json:"channel" bson:"channel"`
+	TemplateRef    string            `json:"templateRef" bson:"templateRef"`
+	Payload        map[string]any    `json:"payload" bson:"payload"`
+	Metadata       map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
+	CreatedAt      time.Time         `json:"createdAt" bson:"createdAt"`
 }
 
 type DeliveryLog struct {
