@@ -1,9 +1,9 @@
 kafka:
   brokers:
-    - "localhost:9092"
-  groupId: "notifyx-processor"
-  inputTopic: "notifyx-events"
-  dlqTopic: "notifyx-events-dlq"
+    - "${KAFKA_BROKER:-localhost:9092}"
+  groupId: "${KAFKA_GROUP_ID:-notifyx-processor}"
+  inputTopic: "${KAFKA_INPUT_TOPIC:-notifyx-events}"
+  dlqTopic: "${KAFKA_DLQ_TOPIC:-notifyx-events-dlq}"
   minBytes: 10000
   maxBytes: 1000000
   maxWait: "1s"
@@ -11,21 +11,21 @@ kafka:
 
 storage:
   mongo:
-    uri: "mongodb://localhost:27017"
-    database: "notifyx"
-    collectionPrefix: ""
+    uri: "${MONGO_URI:-mongodb://localhost:27017}"
+    database: "${MONGO_DATABASE:-notifyx}"
+    collectionPrefix: "${MONGO_COLLECTION_PREFIX:-}"
 
 worker:
   topics:
-    email: "notifyx-worker-email"
-    sms: "notifyx-worker-sms"
-    push: "notifyx-worker-push"
+    email: "${WORKER_TOPIC_EMAIL:-notifyx-worker-email}"
+    sms: "${WORKER_TOPIC_SMS:-notifyx-worker-sms}"
+    push: "${WORKER_TOPIC_PUSH:-notifyx-worker-push}"
 
 cache:
   redis:
-    enabled: true
-    addr: "localhost:6379"
-    db: 0
-    pass: ""
-    ttl: "5m"
+    enabled: true  # Set via NOTIFYX_PROCESSOR__CACHE__REDIS__ENABLED env var or override in config
+    addr: "${REDIS_ADDR:-localhost:6379}"
+    db: 0  # Set via NOTIFYX_PROCESSOR__CACHE__REDIS__DB env var or override in config
+    pass: "${REDIS_PASS:-}"
+    ttl: "${REDIS_TTL:-5m}"
 

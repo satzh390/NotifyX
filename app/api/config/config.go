@@ -3,8 +3,10 @@ package config
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/notifyx/httpx"
 	"github.com/spf13/viper"
 )
 
@@ -26,29 +28,37 @@ type Config struct {
 }
 
 func Load(path string) (Config, error) {
-	viperInstance := viper.New()
-	viperInstance.SetConfigFile(path)
-	viperInstance.SetConfigType("yaml")
-	viperInstance.SetEnvPrefix("NOTIFYX_API")
-	viperInstance.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
-	viperInstance.AutomaticEnv()
+	// Read config file and expand environment variables
+	configBytes, err := os.ReadFile(path)
+	if err != nil {
+		return Config{}, fmt.Errorf("config: read file: %w", err)
+	}
 
-	if err := viperInstance.ReadInConfig(); err != nil {
+	// Expand environment variables in config (supports ${VAR} and ${VAR:-default})
+	expandedConfig := httpx.ExpandEnvWithDefaults(string(configBytes))
+
+	v := viper.New()
+	v.SetConfigType("yaml")
+	v.SetEnvPrefix("NOTIFYX_API")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
+	v.AutomaticEnv()
+
+	// Read from expanded config string
+	if err := v.ReadConfig(strings.NewReader(expandedConfig)); err != nil {
 		return Config{}, fmt.Errorf("config: %w", err)
 	}
 
-	var config Config
-	if err := viperInstance.Unmarshal(&config); err != nil {
+	var cfg Config
+	if err := v.Unmarshal(&cfg); err != nil {
 		return Config{}, fmt.Errorf("config: unmarshal: %w", err)
 	}
 
-	if config.OAuth.Issuer == "" || config.OAuth.JWKS == "" {
+	if cfg.OAuth.Issuer == "" || cfg.OAuth.JWKS == "" {
 		return Config{}, errors.New("config: oauth issuer and jwks are required")
 	}
-	if config.Storage.Mongo.URI == "" || config.Storage.Mongo.Database == "" {
+	if cfg.Storage.Mongo.URI == "" || cfg.Storage.Mongo.Database == "" {
 		return Config{}, errors.New("config: storage.mongo uri and database are required")
 	}
 
-	return config, nil
+	return cfg, nil
 }
-
