@@ -50,6 +50,7 @@ func Load(path string) (Config, error) {
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
 	v.AutomaticEnv()
 
+	// Only set defaults for Kafka tuning parameters (not critical config)
 	v.SetDefault("kafka.minBytes", 1e4)
 	v.SetDefault("kafka.maxBytes", 1e6)
 	v.SetDefault("kafka.maxWait", time.Second)

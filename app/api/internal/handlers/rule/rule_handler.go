@@ -23,8 +23,6 @@ type RuleRequest struct {
 	EventType string `json:"eventType" validate:"required" example:"order.created"`
 	// Channels - list of notification channels for this rule
 	Channels []domain.ChannelType `json:"channels"`
-	// DefaultRecipients - default recipients for this rule
-	DefaultRecipients domain.Recipients `json:"defaultRecipients"`
 	// TemplateRefs - template references by channel type
 	TemplateRefs map[domain.ChannelType]string `json:"templateRefs"`
 }
@@ -33,8 +31,6 @@ type RuleRequest struct {
 type RulePatchRequest struct {
 	// Channels - list of notification channels for this rule
 	Channels []domain.ChannelType `json:"channels"`
-	// DefaultRecipients - default recipients for this rule
-	DefaultRecipients domain.Recipients `json:"defaultRecipients"`
 	// TemplateRefs - template references by channel type
 	TemplateRefs map[domain.ChannelType]string `json:"templateRefs"`
 }
@@ -58,11 +54,10 @@ func (handler *RuleHandler) Create(fiberCtx *fiber.Ctx) error {
 	}
 
 	rule := domain.Rule{
-		EventType:         body.EventType,
-		CustomerID:        customerID,
-		Channels:          body.Channels,
-		DefaultRecipients: body.DefaultRecipients,
-		TemplateRefs:      body.TemplateRefs,
+		EventType:    body.EventType,
+		CustomerID:   customerID,
+		Channels:     body.Channels,
+		TemplateRefs: body.TemplateRefs,
 	}
 
 	if err := handler.store.Put(context.Background(), rule); err != nil {
@@ -143,11 +138,10 @@ func (handler *RuleHandler) Put(fiberCtx *fiber.Ctx) error {
 	exists := err == nil
 
 	rule := domain.Rule{
-		EventType:         eventType,
-		CustomerID:        customerID,
-		Channels:          body.Channels,
-		DefaultRecipients: body.DefaultRecipients,
-		TemplateRefs:      body.TemplateRefs,
+		EventType:    eventType,
+		CustomerID:   customerID,
+		Channels:     body.Channels,
+		TemplateRefs: body.TemplateRefs,
 	}
 
 	if err := handler.store.Put(context.Background(), rule); err != nil {

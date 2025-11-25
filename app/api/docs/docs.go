@@ -1335,9 +1335,6 @@ const docTemplate = `{
                 "createdAt": {
                     "type": "string"
                 },
-                "defaultRecipients": {
-                    "$ref": "#/definitions/domain.Recipients"
-                },
                 "eventType": {
                     "type": "string"
                 },
@@ -1527,9 +1524,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/domain.ChannelType"
                     }
-                },
-                "defaultRecipients": {
-                    "$ref": "#/definitions/domain.Recipients"
                 },
                 "eventType": {
                     "type": "string"

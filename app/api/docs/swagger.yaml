@@ -90,8 +90,6 @@ definitions:
         type: array
       createdAt:
         type: string
-      defaultRecipients:
-        $ref: '#/definitions/domain.Recipients'
       eventType:
         type: string
       orgId:
@@ -218,8 +216,6 @@ definitions:
         items:
           $ref: '#/definitions/domain.ChannelType'
         type: array
-      defaultRecipients:
-        $ref: '#/definitions/domain.Recipients'
       eventType:
         type: string
       templateRefs:

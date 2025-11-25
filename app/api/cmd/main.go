@@ -10,8 +10,10 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/notifyx/api/config"
 	"github.com/notifyx/api/internal/server"
@@ -25,19 +27,24 @@ func main() {
 		configPath = "config/config.yaml"
 	}
 
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		logger.Error("failed to load config", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	stores, cleanup, err := mongoadapter.NewStoreSet(ctx, mongoadapter.Options{
 		URI:      cfg.Storage.Mongo.URI,
 		Database: cfg.Storage.Mongo.Database,
 	})
 	if err != nil {
-		log.Fatalf("failed to initialize mongo store: %v", err)
+		logger.Error("failed to initialize mongo store", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 	defer func() {
 		if cleanup != nil {
@@ -47,14 +54,20 @@ func main() {
 
 	validator, err := httpx.NewJWKSValidator(ctx, cfg.OAuth.Issuer, cfg.OAuth.JWKS, cfg.OAuth.Audiences)
 	if err != nil {
-		log.Fatalf("failed to initialize auth validator: %v", err)
+		logger.Error("failed to initialize auth validator", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
 	srv := server.New(server.Config{
 		Addr: cfg.HTTP.Addr,
 	}, stores, validator)
 
+	logger.Info("api started", slog.String("addr", cfg.HTTP.Addr))
+
 	if err := srv.Run(ctx); err != nil {
-		log.Fatalf("notifyx-api exited: %v", err)
+		logger.Error("api exited with error", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
+
+	logger.Info("api exited cleanly")
 }

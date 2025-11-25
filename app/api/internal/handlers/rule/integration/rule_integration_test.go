@@ -23,9 +23,6 @@ func TestIntegration_Rule_Create(t *testing.T) {
 	createBody := map[string]interface{}{
 		"eventType": "order.created",
 		"channels":  []string{"email", "sms"},
-		"defaultRecipients": map[string]interface{}{
-			"subscriberIds": []string{"sub-1"},
-		},
 	}
 	bodyJSON, _ := json.Marshal(createBody)
 

@@ -51,9 +51,6 @@ func TestRuleHandler_Create(t *testing.T) {
 	body := map[string]interface{}{
 		"eventType": "order.created",
 		"channels":  []string{"email", "sms"},
-		"defaultRecipients": map[string]interface{}{
-			"subscriberIds": []string{"sub-1"},
-		},
 	}
 	bodyJSON, _ := json.Marshal(body)
 
@@ -154,9 +151,6 @@ func TestRuleHandler_Put(t *testing.T) {
 	fullBody := map[string]interface{}{
 		"eventType": eventType,
 		"channels":  []string{"email", "sms"},
-		"defaultRecipients": map[string]interface{}{
-			"subscriberIds": []string{"sub-1"},
-		},
 	}
 	bodyJSON, _ := json.Marshal(fullBody)
 

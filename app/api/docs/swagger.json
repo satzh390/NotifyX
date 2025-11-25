@@ -1328,9 +1328,6 @@
                 "createdAt": {
                     "type": "string"
                 },
-                "defaultRecipients": {
-                    "$ref": "#/definitions/domain.Recipients"
-                },
                 "eventType": {
                     "type": "string"
                 },
@@ -1520,9 +1517,6 @@
                     "items": {
                         "$ref": "#/definitions/domain.ChannelType"
                     }
-                },
-                "defaultRecipients": {
-                    "$ref": "#/definitions/domain.Recipients"
                 },
                 "eventType": {
                     "type": "string"

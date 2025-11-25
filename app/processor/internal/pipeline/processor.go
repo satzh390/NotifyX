@@ -122,7 +122,7 @@ func (processor *Processor) handleMessage(ctx context.Context, msg kafka.Message
 		return fmt.Errorf("rule lookup: %w", err)
 	}
 
-	recipients := mergeRecipients(env.Recipients, rule.DefaultRecipients)
+	recipients := env.Recipients
 	if err := validateRecipientLimits(recipients); err != nil {
 		return fmt.Errorf("recipient limits: %w", err)
 	}
@@ -197,31 +197,6 @@ func (processor *Processor) publishDLQ(ctx context.Context, msg kafka.Message, p
 		Key:   msg.Key,
 		Value: body,
 	})
-}
-
-func mergeRecipients(primary, fallback domain.Recipients) domain.Recipients {
-	result := domain.Recipients{
-		SubscriberIDs: append([]string{}, fallback.SubscriberIDs...),
-		Groups:        append([]string{}, fallback.Groups...),
-		Broadcast:     fallback.Broadcast,
-		DirectEmails:  append([]string{}, fallback.DirectEmails...),
-		DirectPhones:  append([]string{}, fallback.DirectPhones...),
-	}
-
-	if len(primary.SubscriberIDs) > 0 {
-		result.SubscriberIDs = append(result.SubscriberIDs, primary.SubscriberIDs...)
-	}
-	if len(primary.Groups) > 0 {
-		result.Groups = append(result.Groups, primary.Groups...)
-	}
-	result.Broadcast = result.Broadcast || primary.Broadcast
-	if len(primary.DirectEmails) > 0 {
-		result.DirectEmails = append(result.DirectEmails, primary.DirectEmails...)
-	}
-	if len(primary.DirectPhones) > 0 {
-		result.DirectPhones = append(result.DirectPhones, primary.DirectPhones...)
-	}
-	return result
 }
 
 func validateRecipientLimits(recipients domain.Recipients) error {

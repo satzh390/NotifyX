@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -24,12 +23,14 @@ import (
 )
 
 func main() {
-	cfgPath := flag.String("config", "config.yaml", "path to processor config file")
-	flag.Parse()
+	configPath := os.Getenv("NOTIFYX_PROCESSOR_CONFIG")
+	if configPath == "" {
+		configPath = "config/config.yaml"
+	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	cfg, err := config.Load(*cfgPath)
+	cfg, err := config.Load(configPath)
 	if err != nil {
 		logger.Error("failed to load config", slog.String("error", err.Error()))
 		os.Exit(1)

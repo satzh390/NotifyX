@@ -195,7 +195,22 @@ func TestCustomerHandler_Put_NotFound(t *testing.T) {
 
 	customerID := uuid.NewString()
 	orgID := uuid.NewString()
+	createdCustomer := domain.Customer{
+		ID:        customerID,
+		OrgID:     orgID,
+		Name:      "New Name",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	// First Get returns NotFound (entity doesn't exist)
 	store.On("Get", mock.Anything, customerID).Return(domain.Customer{}, storage.ErrNotFound).Once()
+	// Put creates the entity
+	store.On("Put", mock.Anything, mock.MatchedBy(func(c domain.Customer) bool {
+		return c.ID == customerID && c.Name == "New Name" && c.OrgID == orgID
+	})).Return(nil).Once()
+	// Second Get retrieves the created entity
+	store.On("Get", mock.Anything, customerID).Return(createdCustomer, nil).Once()
 
 	body := map[string]interface{}{
 		"id":    customerID,
@@ -209,7 +224,8 @@ func TestCustomerHandler_Put_NotFound(t *testing.T) {
 	resp, err := app.Test(req)
 
 	assert.NoError(t, err)
-	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	// PUT with non-existent entity should create it and return 201
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
 	store.AssertExpectations(t)
 }

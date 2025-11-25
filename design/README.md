@@ -8,7 +8,7 @@ NotifyX is an event-driven, highly scalable, real-time notification platform des
 
 | Service | Name | Purpose | Notes |
 |---|---:|---|---|
-| API + subscriber/tenant config service | `notifyx-api` | Public REST APIs | Event ingestion, subscriber/group/tenant management, templates, rules, authentication |
+| API + subscriber/tenant config service | `notifyx-api` | Public REST APIs | Event ingestion, organization/customer/subscriber/group/tenant management, templates, rules, authentication |
 | Event ingestion + rule evaluation | `notifyx-processor` | Consume events → apply rules → determine subscribers | Real-time fanout based on subscriber preferences & group membership |
 | Delivery worker (email, SMS, webhook, push) | `notifyx-worker` | Channel-specific delivery | Modular plugins for SendGrid, Twilio, SMTP, Push, custom adapters |
 | Admin UI | `notifyx-console` | Angular/React Dashboard | Manage templates, groups, rules, subscriber profiles, logs |
@@ -26,7 +26,17 @@ NotifyX is separated into four horizontally scalable layers, each pluggable:
 
 ### 1) Web Configuration Layer
 
-Subscriber Configuration
+**Organization & Customer Management**
+
+- **Organizations**: Top-level entities representing companies or SaaS providers
+  - `id`, `name`, `type` (company | saasProvider)
+  - Used for multi-tenant SaaS scenarios where one organization manages multiple customers
+- **Customers**: Business units or tenants within an organization
+  - `id`, `orgId` (links to organization), `name`, `logo`, `metadata`
+  - Customers belong to organizations (hierarchy: Organization → Customer → Subscribers)
+  - For single-tenant scenarios, one organization may have one customer
+
+**Subscriber Configuration**
 
 - Tenant-scoped subscribers: create/update subscribers
 - Stored per-subscriber:
@@ -35,18 +45,20 @@ Subscriber Configuration
   - Subscribed event types (opt-ins)
   - Metadata
 - Subscribers can belong to multiple groups
+- Subscribers are scoped to a `customerId` (which may be nested under an `orgId`)
 
-Group Management
+**Group Management**
 
 - Create groups, add/remove subscribers
 - Many-to-many membership (subscriber ↔ groups)
 - Group semantics defined by tenant (e.g., `operators`, `admins`, `warehouse`)
+- Groups are scoped to a `customerId`
 
-Template & Rule Configuration
+**Template & Rule Configuration**
 
 - CRUD templates (Email, SMS, Push, Webhook JSON)
-- Rules map `eventType` → channels + template + default recipients
-- Supported recipient types: `subscriberIds[]`, `groups[]`, `broadcast` (all subscribers)
+- Rules map `eventType` → channels + template
+- Supported recipient types: `subscriberIds[]`, `groups[]`, `broadcast` (all subscribers), `directEmails[]`, `directPhones[]`
 - Versioning, preview, test-send
 
 ### 2) Event Processing Layer (Ingest + Fanout)
@@ -54,12 +66,18 @@ Template & Rule Configuration
 Responsibilities:
 
 - Receive events via HTTP `/events` or broker (Kafka/NATS/RabbitMQ/SQS)
-- Load rule metadata and default recipients
-- Expand recipients using `subscriberIds[]`, `groups[]`, `broadcast`, and rule defaults
+- Load rule metadata
+- **Recipients are optional in events** - if not provided, system uses:
+  1. Subscribers/groups that have subscribed to the event type (`subscribedEventTypes`)
+- Expand recipients using `subscriberIds[]`, `groups[]`, `broadcast`, `directEmails[]`, `directPhones[]`
 - Merge and deduplicate subscriber list
 - Filter subscribers by preferences (disabled channels, DND, unsubscribed event types)
 - Generate idempotency keys: `<customerId>:<eventId>:<channel>`
 - Produce delivery tasks to per-channel queues
+
+**Recipient Resolution Priority:**
+1. Explicit recipients in event (if provided)
+2. Subscribers/groups subscribed to the event type (if no explicit recipients)
 
 ### 3) Message Delivery Worker Layer
 
@@ -76,11 +94,12 @@ Workers perform:
 
 UI features:
 
+- Manage organizations and customers
 - Manage subscribers and multi-membership groups
 - Manage templates (preview + versioning)
 - Manage rules and test-send
 - View event → fanout → delivery logs, traces, retries
-- Search/filter by `customerId`, event type, `subscriberId`, `groupId`, channel, status
+- Search/filter by `orgId`, `customerId`, event type, `subscriberId`, `groupId`, channel, status
 
 ---
 
@@ -91,6 +110,7 @@ UI features:
 - Tenants own subscriber lifecycle, group definitions, and auth policies
 - Multi-group membership supported (N:N)
 - Horizontally scalable and asynchronous workflows
+- **Hierarchical multi-tenancy**: Organization → Customer → Subscribers (supports both single-tenant and multi-tenant SaaS models)
 
 ---
 
@@ -105,34 +125,66 @@ UI features:
 
 ## 🔷 Core Entities (Updated)
 
-- Subscriber
-  - `subscriberId` (external eg: UserId)
-  - `customerId` (scopes the subscriber to a tenant or business unit; optionally pair with `orgId` for SaaS providers)
+- **Organization**
+  - `id` (immutable)
+  - `name`, `type` (company | saasProvider)
+  - `createdAt`, `updatedAt`
+  - Top-level entity for multi-tenant SaaS scenarios
+
+- **Customer**
+  - `id` (immutable)
+  - `orgId` (immutable, links to organization)
+  - `name`, `logo`, `metadata`
+  - `createdAt`, `updatedAt`
+  - Business unit or tenant within an organization
+
+- **Subscriber**
+  - `subscriberId` (external eg: UserId, immutable)
+  - `customerId` (scopes the subscriber to a tenant or business unit, immutable)
   - `email`, `phone`, `pushToken`, `webhookUrl`
   - `preferences` { channels: { email/sms/push/webhook: true/false }, language, allowedDays[], notificationWindow { start, end } }
-  - `subscribedEventTypes: [string]`
-  - `groups: [groupId]`
+  - `subscribedEventTypes: [string]` (opt-in event types)
+  - `groups: [groupId]` (many-to-many membership)
   - `metadata` (optional)
-- Group
-  - `groupId`, `customerId`, `name`, `description`
+  - `createdAt` (immutable)
+
+- **Group**
+  - `groupId` (immutable)
+  - `customerId` (immutable)
+  - `name`, `description`
   - `subscribers: [subscriberId]` (many-to-many)
-  - `subscribedEventTypes: [string]`
+  - `subscribedEventTypes: [string]` (opt-in event types)
   - `metadata` (optional)
-- Event
+
+- **Event**
   - `eventId`, `customerId`, `type`, `payload/data`
-  - `recipients` { `subscriberIds?`, `groups?`, `broadcast?` }
-- Rule
-  - `eventType`, `customerId`, `channels[]`, `defaultRecipients` (subscriberIds/groups/broadcast)
-- Channel
-  - `type`: `email` | `sms` | `push` | `webhook` | `custom`
-  - `templateRef`
+  - `recipients` { `subscriberIds?`, `groups?`, `broadcast?`, `directEmails?`, `directPhones?` } **— OPTIONAL**
+    - If not provided, system uses rule defaults or interested subscribers/groups
+  - `meta` (optional metadata)
+
+- **Rule**
+  - `eventType` (immutable)
+  - `customerId` (immutable)
+  - `channels[]`
+  - `templateRefs` (map of channel → template ID)
+  - `createdAt` (immutable), `updatedAt`
+
+- **Template**
+  - `id` (immutable)
+  - `customerId` (immutable)
+  - `name`, `channel` (immutable), `version`
+  - `content` (channel-specific: subject/body for email, body for SMS, title/body for push, payload for webhook)
+  - `translations` (optional, map of language code → content)
+  - `metadata` (optional)
+  - `createdAt` (immutable), `updatedAt`
 
 ---
 
 ## 🔷 Typical Data Flow (Subscriber + Group Fanout)
 
-1) Client system emits event via `POST /events` (example payload):
+1) Client system emits event via `POST /events` or Kafka (example payloads):
 
+**With explicit recipients:**
 ```json
 {
   "customerId":"acme-store",
@@ -146,18 +198,46 @@ UI features:
 }
 ```
 
-2) Processor loads rule + expands subscribers: explicit `subscriberIds` + members of `operators` + members of `warehouse` + optional rule defaults
-3) Deduplicate subscriberIds
-4) For each subscriber → expand per-channel tasks (respecting preferences and DND)
-5) Workers send notifications + log status
+**Without recipients (uses interested subscribers):**
+```json
+{
+  "customerId":"acme-store",
+  "type":"ORDER_DELAYED",
+  "payload":{"orderId":123}
+}
+```
+
+**With direct email/phone (no subscriber required):**
+```json
+{
+  "customerId":"acme-store",
+  "type":"ORDER_DELAYED",
+  "recipients":{
+    "directEmails":["customer@example.com"],
+    "directPhones":["+1234567890"]
+  },
+  "payload":{"orderId":123}
+}
+```
+
+2) Processor loads rule + resolves recipients:
+   - If event has explicit recipients → use them
+   - If event has no recipients → use subscribers/groups that have `subscribedEventTypes` matching the event type
+3) Expand recipients: explicit `subscriberIds` + members of groups + direct emails/phones
+4) Deduplicate subscriberIds
+5) For each subscriber → expand per-channel tasks (respecting preferences and DND)
+6) Workers send notifications + log status
 
 ---
 
 ## 🔷 Multi-Tenancy Notes
 
-- All entities partitioned by `customerId` (optionally nested under an `orgId`)
+- **Hierarchical structure**: Organization → Customer → Subscribers/Groups/Templates/Rules
+- All entities partitioned by `customerId` (nested under `orgId` for SaaS providers)
 - Tenant isolation enforced at API, storage, and delivery pipeline
 - Storage options: schema-per-tenant, table-per-tenant, or shared table with a `customerId` (and optional `orgId`) partition (start with shared table + partition)
+- **Single-tenant model**: One organization with one customer
+- **Multi-tenant SaaS model**: One organization managing multiple customers
 
 ---
 
@@ -166,7 +246,7 @@ UI features:
 - Delivery semantics: at-least-once default; exactly-once optional with idempotent stores
 - Quotas per-org and per-channel rate limiting
 - Retries + DLQ + DLQ inspection UI
-- Observability: Prometheus metrics, OpenTelemetry traces, structured logs with `customerId`
+- Observability: Prometheus metrics, OpenTelemetry traces, structured logs with `customerId` and `orgId`
 - Secrets stored in secret manager (Vault/AWS Secrets Manager)
 
 ---
@@ -174,9 +254,12 @@ UI features:
 ## 🔷 Minimal Config Example
 
 - `messageBroker.type: kafka`
-- `subscriberStore.type: dynamodb`
-- `groupStore.type: dynamodb`
-- `templateStore.type: s3`
+- `subscriberStore.type: mongodb`
+- `groupStore.type: mongodb`
+- `organizationStore.type: mongodb`
+- `customerStore.type: mongodb`
+- `templateStore.type: mongodb`
+- `ruleStore.type: mongodb`
 - `retry.maxAttempts: 3`
 - `retry.backoffBaseMs: 2000`
 - `notifier.mail.provider: smtp-server`
@@ -189,11 +272,11 @@ UI features:
 This section breaks the work into concrete milestones, deliverables, acceptance criteria, and suggested timeline for a small team (2–4 engineers).
 
 **Phase 0 — Foundations (1–2 weeks)**
-- Deliverables: tech choices, API sketch, SPI definitions, data model (subscriber/group/event/rule)
+- Deliverables: tech choices, API sketch, SPI definitions, data model (organization/customer/subscriber/group/event/rule)
 - Acceptance: documented SPI interfaces, example `application.yml`, basic ERD, and a `README.md` for each service
 - Tasks:
   - Decide language(s) and frameworks (Go/Java/Node) and message broker
-  - Design REST routes and minimal JSON contracts for subscribers, groups, events, templates, rules
+  - Design REST routes and minimal JSON contracts for organizations, customers, subscribers, groups, events, templates, rules
   - Create repository skeletons (monorepo or multiple repos) and CI templates
 
 **Phase 1 — MVP (3–6 weeks)**
@@ -201,27 +284,28 @@ This section breaks the work into concrete milestones, deliverables, acceptance 
 - Deliverables: running `notifyx-api`, `notifyx-processor`, `notifyx-worker` (email), and `notifyx-console` with minimal features
 - Acceptance criteria:
   - `POST /events` ingests events and results in delivery attempts in worker logs
-  - Subscribers and groups CRUD working with in-memory or simple persistent store
+  - Organizations, customers, subscribers and groups CRUD working with persistent store
   - Templates can be created and used by rules
+  - Events can be sent with or without explicit recipients (falls back to rule defaults or interested subscribers)
   - Delivery logs show per-`customerId` (and `orgId` when relevant) status
 - Tasks (incremental):
-  1. Implement `notifyx-api` endpoints for Subscriber, Group, Template, Rule, Event ingestion
-  2. Implement `notifyx-processor` that reads events, expands recipients (subscriberIds/groups/broadcast), filters preferences, and enqueues tasks (in-memory queue for MVP)
-  3. Implement `notifyx-worker` for email using SMTP/SendGrid with template rendering and retry logic (in-memory DLQ)
-  4. Build minimal `notifyx-console` to manage subscribers, groups, templates, and view logs
+  1. Implement `notifyx-api` endpoints for Organization, Customer, Subscriber, Group, Template, Rule, Event ingestion
+  2. Implement `notifyx-processor` that reads events, resolves recipients (explicit → interested subscribers), expands recipients (subscriberIds/groups/broadcast/directEmails/directPhones), filters preferences, and enqueues tasks
+  3. Implement `notifyx-worker` for email using SMTP/SendGrid with template rendering and retry logic (DLQ)
+  4. Build minimal `notifyx-console` to manage organizations, customers, subscribers, groups, templates, and view logs
   5. Add unit tests and a simple integration test to exercise event→delivery path
 
 **Phase 2 — Hardening (2–4 weeks)**
 - Goal: make system production-ready for a pilot tenant
-- Deliverables: Kafka ingestion, persistent stores (DynamoDB/Postgres), S3 template store, secrets integration, metrics, tracing
+- Deliverables: Kafka ingestion, persistent stores (MongoDB/DynamoDB/Postgres), secrets integration, metrics, tracing
 - Acceptance criteria:
   - Kafka consumer capable of high-throughput ingestion
-  - Persistent storage of subscribers/groups and delivery logs
+  - Persistent storage of organizations, customers, subscribers/groups and delivery logs
   - Metrics (Prometheus) and traces (OpenTelemetry) visible for end-to-end flows
   - Retry policies, exponential backoff, DLQ persisted and inspectable
 - Tasks:
   - Swap in Kafka for processor ingestion and SQS/Redis for delivery queues where appropriate
-  - Implement persistent stores and migration scripts for subscriber data
+  - Implement persistent stores and migration scripts for organization, customer, and subscriber data
   - Integrate secret manager for provider credentials
   - Implement rate limiting and per-org quotas
 
@@ -243,7 +327,7 @@ This section breaks the work into concrete milestones, deliverables, acceptance 
 
 - Unit tests for SPI implementations and template rendering
 - Integration tests: processor + worker + API using test Kafka or in-memory broker
-- End-to-end smoke tests: create subscriber/group/rule → send event → assert delivery log
+- End-to-end smoke tests: create organization/customer → create subscriber/group/rule → send event (with and without recipients) → assert delivery log
 - CI: run tests and lint on pull requests; build container images for services
 
 ---

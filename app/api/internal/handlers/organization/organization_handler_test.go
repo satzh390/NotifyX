@@ -184,7 +184,22 @@ func TestOrganizationHandler_Put_NotFound(t *testing.T) {
 	app, store := setupOrganizationTestApp()
 
 	orgID := uuid.NewString()
+	createdOrg := domain.Organization{
+		ID:        orgID,
+		Name:      "New Name",
+		Type:      domain.OrganizationTypeCompany,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	// First Get returns NotFound (entity doesn't exist)
 	store.On("Get", mock.Anything, orgID).Return(domain.Organization{}, storage.ErrNotFound).Once()
+	// Put creates the entity
+	store.On("Put", mock.Anything, mock.MatchedBy(func(o domain.Organization) bool {
+		return o.ID == orgID && o.Name == "New Name" && o.Type == domain.OrganizationTypeCompany
+	})).Return(nil).Once()
+	// Second Get retrieves the created entity
+	store.On("Get", mock.Anything, orgID).Return(createdOrg, nil).Once()
 
 	body := map[string]interface{}{
 		"id":   orgID,
@@ -198,7 +213,8 @@ func TestOrganizationHandler_Put_NotFound(t *testing.T) {
 	resp, err := app.Test(req)
 
 	assert.NoError(t, err)
-	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	// PUT with non-existent entity should create it and return 201
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
 	store.AssertExpectations(t)
 }

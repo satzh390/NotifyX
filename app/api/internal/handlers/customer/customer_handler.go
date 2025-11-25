@@ -118,16 +118,16 @@ func (handler *CustomerHandler) Get(fiberCtx *fiber.Ctx) error {
 }
 
 // PutCustomer godoc
-// @Summary Update a customer (full replacement)
+// @Summary Create or update a customer (full object)
 // @Tags customers
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Customer ID"
 // @Param customer body CustomerRequest true "Customer data (orgId and name are required)"
-// @Success 200 {object} domain.Customer
+// @Success 200 {object} domain.Customer "Updated customer"
+// @Success 201 {object} domain.Customer "Created customer"
 // @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /customers/{id} [put]
 func (handler *CustomerHandler) Put(fiberCtx *fiber.Ctx) error {
@@ -141,14 +141,19 @@ func (handler *CustomerHandler) Put(fiberCtx *fiber.Ctx) error {
 		return err
 	}
 
-	// Verify customer exists
-	_, err = handler.store.Get(context.Background(), customerID)
-	if err != nil {
-		if err == storage.ErrNotFound {
-			return fiber.NewError(http.StatusNotFound, "customer not found")
-		}
-		return fiber.NewError(http.StatusInternalServerError, err.Error())
+	// For PUT, id is required in the body
+	if body.ID == "" {
+		return fiber.NewError(http.StatusBadRequest, "id is required in request body")
 	}
+
+	// Ensure the ID in the path matches the ID in the body
+	if body.ID != customerID {
+		return fiber.NewError(http.StatusBadRequest, "customer id in path must match customer id in body")
+	}
+
+	// Check if customer exists
+	_, err = handler.store.Get(context.Background(), customerID)
+	exists := err == nil
 
 	customer := domain.Customer{
 		ID:        customerID,
@@ -163,12 +168,18 @@ func (handler *CustomerHandler) Put(fiberCtx *fiber.Ctx) error {
 		return fiber.NewError(http.StatusInternalServerError, err.Error())
 	}
 
+	// Fetch the customer to get CreatedAt/UpdatedAt set by the store
 	updated, err := handler.store.Get(context.Background(), customerID)
 	if err != nil {
-		return fiber.NewError(http.StatusInternalServerError, "failed to retrieve updated customer: "+err.Error())
+		return fiber.NewError(http.StatusInternalServerError, "failed to retrieve customer: "+err.Error())
 	}
 
-	return fiberCtx.JSON(updated)
+	statusCode := http.StatusOK
+	if !exists {
+		statusCode = http.StatusCreated
+	}
+
+	return fiberCtx.Status(statusCode).JSON(updated)
 }
 
 // PatchCustomer godoc
@@ -198,21 +209,17 @@ func (handler *CustomerHandler) Patch(fiberCtx *fiber.Ctx) error {
 		return fiber.NewError(http.StatusInternalServerError, err.Error())
 	}
 
-	body, err := httpx.ParseAndValidateBody[CustomerPatchRequest](fiberCtx)
+	// Validate patch body and get raw bytes for merge patch
+	patchBytes, err := httpx.ValidatePatchBody[CustomerPatchRequest](fiberCtx)
 	if err != nil {
 		return err
 	}
 
-	// Apply partial updates
-	if body.Name != "" {
-		existing.Name = body.Name
+	// Apply merge patch (automatically protects immutable fields)
+	if err := httpx.MergePatch(&existing, patchBytes); err != nil {
+		return fiber.NewError(http.StatusBadRequest, "failed to apply patch: "+err.Error())
 	}
-	if body.Logo != "" {
-		existing.Logo = body.Logo
-	}
-	if body.Metadata != nil {
-		existing.Metadata = body.Metadata
-	}
+
 	existing.UpdatedAt = time.Now()
 
 	if err := handler.store.Put(context.Background(), existing); err != nil {
@@ -276,4 +283,3 @@ func (handler *CustomerHandler) List(fiberCtx *fiber.Ctx) error {
 
 	return fiberCtx.JSON(result)
 }
-

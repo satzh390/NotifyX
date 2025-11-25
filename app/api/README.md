@@ -1,6 +1,25 @@
 ## notifyx-api
 
-This service exposes the public REST interface used to manage subscribers and ingest events.  
+This service exposes the public REST interface used to manage organizations, customers, subscribers, groups, templates, rules, and ingest events.
+
+### Quick Start
+
+1. **Start local infrastructure:**
+   ```cmd
+   docker compose -f ../../docker-compose.local.yaml up -d
+   ```
+
+2. **Run the API:**
+   ```cmd
+   go run ./cmd
+   ```
+
+3. **Verify it's running:**
+   ```cmd
+   curl http://localhost:8080/health
+   ```
+
+The API will be available at `http://localhost:8080` with Swagger docs at `http://localhost:8080/swagger/index.html`.
 
 ### Running locally
 
@@ -12,14 +31,95 @@ go run ./cmd
 
 To load a different config path, set `NOTIFYX_API_CONFIG=/path/to/custom.yaml`.
 
-Any field can be overridden via environment variables using the pattern `NOTIFYX_API_<SECTION>__<KEY>`. Examples:
+### Configuration
 
-| Environment variable | Overrides |
-| --- | --- |
-| `NOTIFYX_API_HTTP__ADDR` | `http.addr` |
-| `NOTIFYX_API_OAUTH__ISSUER` | `oauth.issuer` |
-| `NOTIFYX_API_OAUTH__JWKS` | `oauth.jwks` |
-| `NOTIFYX_API_OAUTH__AUDIENCES` | `oauth.audiences` (comma-separated list) |
+Configuration is loaded from `config/config.yaml` by default. To use a different config file, set the `NOTIFYX_API_CONFIG` environment variable:
+
+**Windows (Command Prompt):**
+```cmd
+set NOTIFYX_API_CONFIG=C:\path\to\custom.yaml
+```
+
+**Linux/Mac:**
+```bash
+export NOTIFYX_API_CONFIG=/path/to/custom.yaml
+```
+
+#### Overriding Config Values with Environment Variables
+
+Any configuration value can be overridden using environment variables. The pattern is:
+- **Prefix**: `NOTIFYX_API_`
+- **Key mapping**: Dots (`.`) in config keys become double underscores (`__`)
+- **Case**: Environment variable names are case-sensitive (use uppercase)
+
+**Examples:**
+
+| Config File Path | Environment Variable | Example Value |
+|-----------------|---------------------|---------------|
+| `http.addr` | `NOTIFYX_API_HTTP__ADDR` | `:8080` |
+| `oauth.issuer` | `NOTIFYX_API_OAUTH__ISSUER` | `https://auth.example.com` |
+| `oauth.jwks` | `NOTIFYX_API_OAUTH__JWKS` | `https://auth.example.com/jwks` |
+| `oauth.audiences` | `NOTIFYX_API_OAUTH__AUDIENCES` | `app1,app2,app3` (comma-separated) |
+| `storage.mongo.uri` | `NOTIFYX_API_STORAGE__MONGO__URI` | `mongodb://prod:27017` |
+| `storage.mongo.database` | `NOTIFYX_API_STORAGE__MONGO__DATABASE` | `notifyx_prod` |
+
+**How to use:**
+
+**Windows (Command Prompt):**
+```cmd
+REM Override MongoDB URI
+set NOTIFYX_API_STORAGE__MONGO__URI=mongodb://production:27017
+
+REM Override OAuth issuer
+set NOTIFYX_API_OAUTH__ISSUER=https://auth.example.com
+
+REM Run the API
+go run ./cmd
+```
+
+**Linux/Mac:**
+```bash
+# Override MongoDB URI
+export NOTIFYX_API_STORAGE__MONGO__URI="mongodb://production:27017"
+
+# Override OAuth issuer
+export NOTIFYX_API_OAUTH__ISSUER="https://auth.example.com"
+
+# Run the API
+go run ./cmd
+```
+
+**Using a .env file:**
+
+**Windows (Command Prompt):**
+```cmd
+REM Create .env file with:
+REM NOTIFYX_API_STORAGE__MONGO__URI=mongodb://production:27017
+REM NOTIFYX_API_STORAGE__MONGO__DATABASE=notifyx_prod
+REM NOTIFYX_API_OAUTH__ISSUER=https://auth.example.com
+REM NOTIFYX_API_OAUTH__JWKS=https://auth.example.com/jwks
+
+REM Load and run (requires a .env loader or manual set commands)
+```
+
+**Linux/Mac:**
+```bash
+# .env file
+NOTIFYX_API_STORAGE__MONGO__URI=mongodb://production:27017
+NOTIFYX_API_STORAGE__MONGO__DATABASE=notifyx_prod
+NOTIFYX_API_OAUTH__ISSUER=https://auth.example.com
+NOTIFYX_API_OAUTH__JWKS=https://auth.example.com/jwks
+
+# Load and run
+source .env
+go run ./cmd
+```
+
+**Important Notes:**
+- Environment variables take precedence over config file values
+- Use double underscores (`__`) to represent dots (`.`) in nested config paths
+- Array values (like `audiences`) should be comma-separated strings
+- The config file is still required - environment variables only override specific values
 
 ### Authentication & Authorization
 
@@ -35,14 +135,9 @@ Any field can be overridden via environment variables using the pattern `NOTIFYX
 
 To get an access token from the local OAuth server:
 
-**Windows (PowerShell):**
-```powershell
-curl -X POST "http://localhost:8081/default/token" `
-  -H "Content-Type: application/x-www-form-urlencoded" `
-  -d "grant_type=client_credentials" `
-  -d "client_id=my-client" `
-  -d "client_secret=secret" `
-  -d "scope=notify:read notify:write"
+**Windows (Command Prompt):**
+```cmd
+curl -X POST "http://localhost:8081/default/token" -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials" -d "client_id=my-client" -d "client_secret=secret" -d "scope=notify:read notify:write"
 ```
 
 **Linux/Mac:**
@@ -61,12 +156,10 @@ The response will contain an `access_token` field. Extract this token and use it
 
 Once you have the token, use it in the `Authorization` header:
 
-**Windows (PowerShell):**
-```powershell
-$token = "YOUR_ACCESS_TOKEN_HERE"
-curl -X GET "http://localhost:8080/api/v1/groups?page=0&pageSize=10&sortOrder=asc" `
-  -H "accept: application/json" `
-  -H "Authorization: Bearer $token"
+**Windows (Command Prompt):**
+```cmd
+set TOKEN=YOUR_ACCESS_TOKEN_HERE
+curl -X GET "http://localhost:8080/api/v1/groups?page=0&pageSize=10&sortOrder=asc" -H "accept: application/json" -H "Authorization: Bearer %TOKEN%"
 ```
 
 **Linux/Mac:**

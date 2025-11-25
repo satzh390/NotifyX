@@ -4,7 +4,7 @@ http:
 oauth:
   issuer: "http://localhost:8081/default"
   jwks: "http://localhost:8081/default/jwks"
-  audiences:
+  audiences: []
 
 storage:
   mongo:

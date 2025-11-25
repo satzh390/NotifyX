@@ -26,29 +26,28 @@ type Config struct {
 }
 
 func Load(path string) (Config, error) {
-	viperInstance := viper.New()
-	viperInstance.SetConfigFile(path)
-	viperInstance.SetConfigType("yaml")
-	viperInstance.SetEnvPrefix("NOTIFYX_API")
-	viperInstance.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
-	viperInstance.AutomaticEnv()
+	v := viper.New()
+	v.SetConfigFile(path)
+	v.SetConfigType("yaml")
+	v.SetEnvPrefix("NOTIFYX_API")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
+	v.AutomaticEnv()
 
-	if err := viperInstance.ReadInConfig(); err != nil {
+	if err := v.ReadInConfig(); err != nil {
 		return Config{}, fmt.Errorf("config: %w", err)
 	}
 
-	var config Config
-	if err := viperInstance.Unmarshal(&config); err != nil {
+	var cfg Config
+	if err := v.Unmarshal(&cfg); err != nil {
 		return Config{}, fmt.Errorf("config: unmarshal: %w", err)
 	}
 
-	if config.OAuth.Issuer == "" || config.OAuth.JWKS == "" {
+	if cfg.OAuth.Issuer == "" || cfg.OAuth.JWKS == "" {
 		return Config{}, errors.New("config: oauth issuer and jwks are required")
 	}
-	if config.Storage.Mongo.URI == "" || config.Storage.Mongo.Database == "" {
+	if cfg.Storage.Mongo.URI == "" || cfg.Storage.Mongo.Database == "" {
 		return Config{}, errors.New("config: storage.mongo uri and database are required")
 	}
 
-	return config, nil
+	return cfg, nil
 }
-
