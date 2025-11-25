@@ -1,13 +1,13 @@
 http:
-  addr: "${HTTP_ADDR:-:8080}"
+  addr: ":8080"
 
 oauth:
-  issuer: "${OAUTH_ISSUER:-http://localhost:8081/default}"
-  jwks: "${OAUTH_JWKS:-http://localhost:8081/default/jwks}"
+  issuer: "http://localhost:8081/default"
+  jwks: "http://localhost:8081/default/jwks"
   audiences: []
 
 storage:
   mongo:
-    uri: "${MONGO_URI:-mongodb://localhost:27017}"
-    database: "${MONGO_DATABASE:-notifyx}"
+    uri: "mongodb://localhost:27017"
+    database: "notifyx"
 
