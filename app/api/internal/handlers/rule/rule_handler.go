@@ -51,7 +51,7 @@ type RulePatchRequest struct {
 // @Failure 500 {object} map[string]string
 // @Router /rules [post]
 func (handler *RuleHandler) Create(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	body, err := httpx.ParseAndValidateBody[RuleRequest](fiberCtx)
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ func (handler *RuleHandler) Create(fiberCtx *fiber.Ctx) error {
 
 	rule := domain.Rule{
 		EventType:         body.EventType,
-		OrgID:             orgID,
+		CustomerID:        customerID,
 		Channels:          body.Channels,
 		DefaultRecipients: body.DefaultRecipients,
 		TemplateRefs:      body.TemplateRefs,
@@ -70,7 +70,7 @@ func (handler *RuleHandler) Create(fiberCtx *fiber.Ctx) error {
 	}
 
 	// Fetch the created rule to get CreatedAt set by the store
-	created, err := handler.store.Get(context.Background(), orgID, rule.EventType)
+	created, err := handler.store.Get(context.Background(), customerID, rule.EventType)
 	if err != nil {
 		return fiber.NewError(http.StatusInternalServerError, "failed to retrieve created rule: "+err.Error())
 	}
@@ -91,13 +91,13 @@ func (handler *RuleHandler) Create(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /rules/{eventType} [get]
 func (handler *RuleHandler) Get(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	eventType := fiberCtx.Params("eventType")
 	if eventType == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing event type")
 	}
 
-	rule, err := handler.store.Get(context.Background(), orgID, eventType)
+	rule, err := handler.store.Get(context.Background(), customerID, eventType)
 	if err != nil {
 		if err == storage.ErrNotFound {
 			return fiber.NewError(http.StatusNotFound, "rule not found")
@@ -122,7 +122,7 @@ func (handler *RuleHandler) Get(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /rules/{eventType} [put]
 func (handler *RuleHandler) Put(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	eventType := fiberCtx.Params("eventType")
 	if eventType == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing event type")
@@ -139,12 +139,12 @@ func (handler *RuleHandler) Put(fiberCtx *fiber.Ctx) error {
 	}
 
 	// Check if rule exists
-	_, err = handler.store.Get(context.Background(), orgID, eventType)
+	_, err = handler.store.Get(context.Background(), customerID, eventType)
 	exists := err == nil
 
 	rule := domain.Rule{
 		EventType:         eventType,
-		OrgID:             orgID,
+		CustomerID:        customerID,
 		Channels:          body.Channels,
 		DefaultRecipients: body.DefaultRecipients,
 		TemplateRefs:      body.TemplateRefs,
@@ -155,7 +155,7 @@ func (handler *RuleHandler) Put(fiberCtx *fiber.Ctx) error {
 	}
 
 	// Fetch the rule to get CreatedAt/UpdatedAt set by the store
-	updated, err := handler.store.Get(context.Background(), orgID, eventType)
+	updated, err := handler.store.Get(context.Background(), customerID, eventType)
 	if err != nil {
 		return fiber.NewError(http.StatusInternalServerError, "failed to retrieve rule: "+err.Error())
 	}
@@ -182,7 +182,7 @@ func (handler *RuleHandler) Put(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /rules/{eventType} [patch]
 func (handler *RuleHandler) Patch(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	eventType := fiberCtx.Params("eventType")
 	if eventType == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing event type")
@@ -194,7 +194,7 @@ func (handler *RuleHandler) Patch(fiberCtx *fiber.Ctx) error {
 		return err
 	}
 
-	existing, err := handler.store.Get(context.Background(), orgID, eventType)
+	existing, err := handler.store.Get(context.Background(), customerID, eventType)
 	if err != nil {
 		if err == storage.ErrNotFound {
 			return fiber.NewError(http.StatusNotFound, "rule not found")
@@ -227,13 +227,13 @@ func (handler *RuleHandler) Patch(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /rules/{eventType} [delete]
 func (handler *RuleHandler) Delete(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	eventType := fiberCtx.Params("eventType")
 	if eventType == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing event type")
 	}
 
-	if err := handler.store.Delete(context.Background(), orgID, eventType); err != nil {
+	if err := handler.store.Delete(context.Background(), customerID, eventType); err != nil {
 		if err == storage.ErrNotFound {
 			return fiber.NewError(http.StatusNotFound, "rule not found")
 		}
@@ -257,8 +257,8 @@ func (handler *RuleHandler) Delete(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /rules [get]
 func (handler *RuleHandler) List(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
-	opts := httpx.ParseListOptions(fiberCtx, orgID)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
+	opts := httpx.ParseListOptions(fiberCtx, customerID)
 
 	result, err := handler.store.List(context.Background(), opts)
 	if err != nil {

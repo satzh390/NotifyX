@@ -49,8 +49,8 @@ func TestIntegration_Template_Create(t *testing.T) {
 	if created.Name != "Order Confirmation" {
 		t.Errorf("Expected name Order Confirmation, got %s", created.Name)
 	}
-	if created.OrgID != "test-org-integration" {
-		t.Errorf("Expected orgID test-org-integration, got %s", created.OrgID)
+	if created.CustomerID != "test-customer-integration" {
+		t.Errorf("Expected customerID test-customer-integration, got %s", created.CustomerID)
 	}
 }
 
@@ -65,7 +65,7 @@ func TestIntegration_Template_Get(t *testing.T) {
 	templateID := uuid.NewString()
 	template := domain.Template{
 		ID:      templateID,
-		OrgID:   "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Name:    "Test Template",
 		Channel: domain.ChannelEmail,
 		Content: domain.TemplateContent{
@@ -110,7 +110,7 @@ func TestIntegration_Template_Update(t *testing.T) {
 	templateID := uuid.NewString()
 	template := domain.Template{
 		ID:      templateID,
-		OrgID:   "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Name:    "Old Name",
 		Channel: domain.ChannelEmail,
 		Content: domain.TemplateContent{
@@ -166,7 +166,7 @@ func TestIntegration_Template_Patch(t *testing.T) {
 	templateID := uuid.NewString()
 	template := domain.Template{
 		ID:      templateID,
-		OrgID:   "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Name:    "Old Name",
 		Channel: domain.ChannelEmail,
 		Content: domain.TemplateContent{
@@ -245,7 +245,7 @@ func TestIntegration_Template_Delete(t *testing.T) {
 	templateID := uuid.NewString()
 	template := domain.Template{
 		ID:      templateID,
-		OrgID:   "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Name:    "Test Template",
 		Channel: domain.ChannelEmail,
 		Content: domain.TemplateContent{

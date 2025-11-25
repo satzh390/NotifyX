@@ -17,8 +17,8 @@ func (m *MockGroupStore) Put(ctx context.Context, group domain.Group) error {
 	return args.Error(0)
 }
 
-func (m *MockGroupStore) Get(ctx context.Context, orgID, groupID string) (domain.Group, error) {
-	args := m.Called(ctx, orgID, groupID)
+func (m *MockGroupStore) Get(ctx context.Context, customerID, groupID string) (domain.Group, error) {
+	args := m.Called(ctx, customerID, groupID)
 	return args.Get(0).(domain.Group), args.Error(1)
 }
 
@@ -27,7 +27,7 @@ func (m *MockGroupStore) List(ctx context.Context, opts domain.ListOptions) (dom
 	return args.Get(0).(domain.ListResult[domain.Group]), args.Error(1)
 }
 
-func (m *MockGroupStore) Delete(ctx context.Context, orgID, groupID string) error {
-	args := m.Called(ctx, orgID, groupID)
+func (m *MockGroupStore) Delete(ctx context.Context, customerID, groupID string) error {
+	args := m.Called(ctx, customerID, groupID)
 	return args.Error(0)
 }

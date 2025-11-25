@@ -21,7 +21,7 @@ func setupRuleTestApp() (*fiber.App, *MockRuleStore) {
 
 	api := app.Group("/api/v1")
 	api.Use(func(c *fiber.Ctx) error {
-		c.Locals("orgId", "test-org")
+		c.Locals("customerId", "test-customer")
 		return c.Next()
 	})
 
@@ -40,11 +40,11 @@ func TestRuleHandler_Create(t *testing.T) {
 	app, store := setupRuleTestApp()
 
 	store.On("Put", mock.Anything, mock.MatchedBy(func(r domain.Rule) bool {
-		return r.EventType == "order.created" && r.OrgID == "test-org"
+		return r.EventType == "order.created" && r.CustomerID == "test-customer"
 	})).Return(nil).Once()
 	store.On("Get", mock.Anything, "test-org", "order.created").Return(domain.Rule{
 		EventType: "order.created",
-		OrgID:     "test-org",
+		CustomerID: "test-customer",
 		Channels:  []domain.ChannelType{domain.ChannelEmail, domain.ChannelSMS},
 	}, nil).Once()
 
@@ -68,7 +68,7 @@ func TestRuleHandler_Create(t *testing.T) {
 	err = json.NewDecoder(resp.Body).Decode(&rule)
 	assert.NoError(t, err)
 	assert.Equal(t, "order.created", rule.EventType)
-	assert.Equal(t, "test-org", rule.OrgID)
+	assert.Equal(t, "test-customer", rule.CustomerID)
 
 	store.AssertExpectations(t)
 }
@@ -96,7 +96,7 @@ func TestRuleHandler_Get(t *testing.T) {
 	eventType := "order.created"
 	expectedRule := domain.Rule{
 		EventType: eventType,
-		OrgID:     "test-org",
+		CustomerID: "test-customer",
 		Channels:  []domain.ChannelType{domain.ChannelEmail},
 	}
 
@@ -136,7 +136,7 @@ func TestRuleHandler_Put(t *testing.T) {
 	eventType := "order.created"
 	existingRule := domain.Rule{
 		EventType: eventType,
-		OrgID:     "test-org",
+		CustomerID: "test-customer",
 		Channels:  []domain.ChannelType{domain.ChannelEmail},
 	}
 
@@ -147,7 +147,7 @@ func TestRuleHandler_Put(t *testing.T) {
 	})).Return(nil).Once()
 	store.On("Get", mock.Anything, "test-org", eventType).Return(domain.Rule{
 		EventType: eventType,
-		OrgID:     "test-org",
+		CustomerID: "test-customer",
 		Channels:  []domain.ChannelType{domain.ChannelEmail, domain.ChannelSMS},
 	}, nil).Once()
 
@@ -182,7 +182,7 @@ func TestRuleHandler_Put_Create(t *testing.T) {
 	})).Return(nil).Once()
 	store.On("Get", mock.Anything, "test-org", eventType).Return(domain.Rule{
 		EventType: eventType,
-		OrgID:     "test-org",
+		CustomerID: "test-customer",
 	}, nil).Once()
 
 	fullBody := map[string]interface{}{
@@ -207,7 +207,7 @@ func TestRuleHandler_Patch(t *testing.T) {
 	eventType := "order.created"
 	existingRule := domain.Rule{
 		EventType: eventType,
-		OrgID:     "test-org",
+		CustomerID: "test-customer",
 		Channels:  []domain.ChannelType{domain.ChannelEmail},
 	}
 

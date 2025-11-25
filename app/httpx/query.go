@@ -9,9 +9,9 @@ import (
 )
 
 // ParseListOptions parses query parameters for pagination, sorting, and filtering
-func ParseListOptions(parser *fiber.Ctx, orgID string) domain.ListOptions {
+func ParseListOptions(parser *fiber.Ctx, customerID string) domain.ListOptions {
 	opts := domain.ListOptions{
-		Filter: map[string]string{"orgId": orgID},
+		Filter: map[string]string{"customerId": customerID},
 	}
 
 	// Parse pagination (0-based)

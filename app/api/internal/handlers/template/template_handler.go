@@ -68,7 +68,7 @@ type TemplatePatchRequest struct {
 // @Failure 500 {object} map[string]string
 // @Router /templates [post]
 func (handler *TemplateHandler) Create(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	body, err := httpx.ParseAndValidateBody[TemplateRequest](fiberCtx)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func (handler *TemplateHandler) Create(fiberCtx *fiber.Ctx) error {
 	now := time.Now()
 	template := domain.Template{
 		ID:           templateID,
-		OrgID:        orgID,
+		CustomerID:   customerID,
 		Name:         body.Name,
 		Channel:      body.Channel,
 		Version:      body.Version,
@@ -145,7 +145,7 @@ func validateTemplateContent(channel domain.ChannelType, content domain.Template
 // @Failure 500 {object} map[string]string
 // @Router /templates/{id} [get]
 func (handler *TemplateHandler) Get(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	templateID := fiberCtx.Params("id")
 	if templateID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing template id")
@@ -157,9 +157,9 @@ func (handler *TemplateHandler) Get(fiberCtx *fiber.Ctx) error {
 	var template domain.Template
 	var err error
 	if language != "" {
-		template, err = handler.store.GetByLanguage(context.Background(), orgID, templateID, language)
+		template, err = handler.store.GetByLanguage(context.Background(), customerID, templateID, language)
 	} else {
-		template, err = handler.store.Get(context.Background(), orgID, templateID)
+		template, err = handler.store.Get(context.Background(), customerID, templateID)
 	}
 
 	if err != nil {
@@ -186,7 +186,7 @@ func (handler *TemplateHandler) Get(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /templates/{id} [put]
 func (handler *TemplateHandler) Put(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	templateID := fiberCtx.Params("id")
 	if templateID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing template id")
@@ -213,12 +213,12 @@ func (handler *TemplateHandler) Put(fiberCtx *fiber.Ctx) error {
 	}
 
 	// Check if template exists
-	_, err = handler.store.Get(context.Background(), orgID, templateID)
+	_, err = handler.store.Get(context.Background(), customerID, templateID)
 	exists := err == nil
 
 	template := domain.Template{
 		ID:           templateID,
-		OrgID:        orgID,
+		CustomerID:   customerID,
 		Name:         body.Name,
 		Channel:      body.Channel,
 		Version:      body.Version,
@@ -232,7 +232,7 @@ func (handler *TemplateHandler) Put(fiberCtx *fiber.Ctx) error {
 	}
 
 	// Fetch the template to get CreatedAt/UpdatedAt set by the store
-	updated, err := handler.store.Get(context.Background(), orgID, templateID)
+	updated, err := handler.store.Get(context.Background(), customerID, templateID)
 	if err != nil {
 		return fiber.NewError(http.StatusInternalServerError, "failed to retrieve template: "+err.Error())
 	}
@@ -259,7 +259,7 @@ func (handler *TemplateHandler) Put(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /templates/{id} [patch]
 func (handler *TemplateHandler) Patch(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	templateID := fiberCtx.Params("id")
 	if templateID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing template id")
@@ -271,7 +271,7 @@ func (handler *TemplateHandler) Patch(fiberCtx *fiber.Ctx) error {
 		return err
 	}
 
-	existing, err := handler.store.Get(context.Background(), orgID, templateID)
+	existing, err := handler.store.Get(context.Background(), customerID, templateID)
 	if err != nil {
 		if err == storage.ErrNotFound {
 			return fiber.NewError(http.StatusNotFound, "template not found")
@@ -311,13 +311,13 @@ func (handler *TemplateHandler) Patch(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /templates/{id} [delete]
 func (handler *TemplateHandler) Delete(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	templateID := fiberCtx.Params("id")
 	if templateID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing template id")
 	}
 
-	if err := handler.store.Delete(context.Background(), orgID, templateID); err != nil {
+	if err := handler.store.Delete(context.Background(), customerID, templateID); err != nil {
 		if err == storage.ErrNotFound {
 			return fiber.NewError(http.StatusNotFound, "template not found")
 		}

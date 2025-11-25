@@ -25,7 +25,7 @@ Any field can be overridden via environment variables using the pattern `NOTIFYX
 
 1. Clients must send `Authorization: Bearer <access_token>` on every call.
 2. The API validates the JWT locally using the configured issuer + JWKS, ensuring signature, expiry, and (optionally) audience are correct. Required claims:
-   - `orgId` (used for tenant partitioning, no header overrides)
+   - `customerId` (used for tenant partitioning, no header overrides)
    - `scope` or `scp` (space-delimited string or string array)
 3. Scopes drive route-level authorization:
    - `notify:write` for mutating resources (e.g., `POST /subscribers`)

@@ -19,7 +19,7 @@ type RuleRepository struct {
 }
 
 func (repo *RuleRepository) Put(ctx context.Context, rule domain.Rule) error {
-	filter := bson.M{"orgId": rule.OrgID, "eventType": rule.EventType}
+	filter := bson.M{"customerId": rule.CustomerID, "eventType": rule.EventType}
 	updateMap, err := BuildUpdateMap(rule)
 	if err != nil {
 		return err
@@ -29,9 +29,9 @@ func (repo *RuleRepository) Put(ctx context.Context, rule domain.Rule) error {
 	update := bson.M{
 		"$set": updateMap,
 		"$setOnInsert": bson.M{
-			"createdAt": time.Now(),
-			"orgId":     rule.OrgID,
-			"eventType": rule.EventType,
+			"createdAt":  time.Now(),
+			"customerId": rule.CustomerID,
+			"eventType":  rule.EventType,
 		},
 	}
 	opts := options.Update().SetUpsert(true)
@@ -39,8 +39,8 @@ func (repo *RuleRepository) Put(ctx context.Context, rule domain.Rule) error {
 	return err
 }
 
-func (repo *RuleRepository) Get(ctx context.Context, orgID, eventType string) (domain.Rule, error) {
-	filter := bson.M{"orgId": orgID, "eventType": eventType}
+func (repo *RuleRepository) Get(ctx context.Context, customerID, eventType string) (domain.Rule, error) {
+	filter := bson.M{"customerId": customerID, "eventType": eventType}
 	var rule domain.Rule
 	err := repo.collection.FindOne(ctx, filter).Decode(&rule)
 	if errors.Is(err, mongoDriver.ErrNoDocuments) {
@@ -87,8 +87,8 @@ func (repo *RuleRepository) List(ctx context.Context, opts domain.ListOptions) (
 	}, nil
 }
 
-func (repo *RuleRepository) Delete(ctx context.Context, orgID, eventType string) error {
-	filter := bson.M{"orgId": orgID, "eventType": eventType}
+func (repo *RuleRepository) Delete(ctx context.Context, customerID, eventType string) error {
+	filter := bson.M{"customerId": customerID, "eventType": eventType}
 	result, err := repo.collection.DeleteOne(ctx, filter)
 	if err != nil {
 		return err

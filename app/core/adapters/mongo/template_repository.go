@@ -17,10 +17,10 @@ type TemplateRepository struct {
 }
 
 func (repo *TemplateRepository) Put(ctx context.Context, template domain.Template) error {
-	// Template ID is unique per org, channel is a property of the template
+	// Template ID is unique per customer, channel is a property of the template
 	filter := bson.M{
-		"orgId": template.OrgID,
-		"id":    template.ID,
+		"customerId": template.CustomerID,
+		"id":         template.ID,
 	}
 	updateMap, err := BuildUpdateMap(template)
 	if err != nil {
@@ -31,10 +31,10 @@ func (repo *TemplateRepository) Put(ctx context.Context, template domain.Templat
 	update := bson.M{
 		"$set": updateMap,
 		"$setOnInsert": bson.M{
-			"createdAt": time.Now(),
-			"orgId":     template.OrgID,
-			"id":        template.ID,
-			"channel":   template.Channel,
+			"createdAt":  time.Now(),
+			"customerId": template.CustomerID,
+			"id":         template.ID,
+			"channel":    template.Channel,
 		},
 	}
 	opts := options.Update().SetUpsert(true)
@@ -42,10 +42,10 @@ func (repo *TemplateRepository) Put(ctx context.Context, template domain.Templat
 	return err
 }
 
-func (repo *TemplateRepository) Get(ctx context.Context, orgID, templateID string) (domain.Template, error) {
+func (repo *TemplateRepository) Get(ctx context.Context, customerID, templateID string) (domain.Template, error) {
 	filter := bson.M{
-		"orgId": orgID,
-		"id":    templateID,
+		"customerId": customerID,
+		"id":          templateID,
 	}
 	var template domain.Template
 	err := repo.collection.FindOne(ctx, filter).Decode(&template)
@@ -60,8 +60,8 @@ func (repo *TemplateRepository) Get(ctx context.Context, orgID, templateID strin
 	return template, nil
 }
 
-func (repo *TemplateRepository) GetByLanguage(ctx context.Context, orgID, templateID, language string) (domain.Template, error) {
-	template, err := repo.Get(ctx, orgID, templateID)
+func (repo *TemplateRepository) GetByLanguage(ctx context.Context, customerID, templateID, language string) (domain.Template, error) {
+	template, err := repo.Get(ctx, customerID, templateID)
 	if err != nil {
 		return domain.Template{}, err
 	}
@@ -89,11 +89,11 @@ func (repo *TemplateRepository) GetByLanguage(ctx context.Context, orgID, templa
 	return template, nil
 }
 
-func (repo *TemplateRepository) Delete(ctx context.Context, orgID, templateID string) error {
+func (repo *TemplateRepository) Delete(ctx context.Context, customerID, templateID string) error {
 	// Delete all variants (all channels and languages)
 	filter := bson.M{
-		"orgId": orgID,
-		"id":    templateID,
+		"customerId": customerID,
+		"id":          templateID,
 	}
 	result, err := repo.collection.DeleteMany(ctx, filter)
 	if err != nil {

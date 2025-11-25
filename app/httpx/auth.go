@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	OrgIDKey   = "orgId"
-	ScopesKey  = "scopes"
+	CustomerIDKey = "customerId"
+	ScopesKey    = "scopes"
 )
 
 var (
@@ -24,9 +24,9 @@ var (
 
 // Claims represents JWT token claims
 type Claims struct {
-	OrgID   string
-	Scopes  []string
-	Subject string
+	CustomerID string
+	Scopes     []string
+	Subject    string
 }
 
 // AuthValidator is an interface for validating authentication tokens
@@ -55,7 +55,7 @@ func RequireAuth(validator AuthValidator, scopes ...string) fiber.Handler {
 			return fiber.NewError(fiber.StatusForbidden, ErrInsufficientScope.Error())
 		}
 
-		fiberCtx.Locals(OrgIDKey, claims.OrgID)
+		fiberCtx.Locals(CustomerIDKey, claims.CustomerID)
 		fiberCtx.Locals(ScopesKey, claims.Scopes)
 		return fiberCtx.Next()
 	}
@@ -97,11 +97,11 @@ func HasScopes(claims Claims, required ...string) bool {
 	return true
 }
 
-// OrgIDFromCtx extracts the organization ID from Fiber context
-func OrgIDFromCtx(fiberCtx *fiber.Ctx) string {
-	if value := fiberCtx.Locals(OrgIDKey); value != nil {
-		if orgID, ok := value.(string); ok {
-			return orgID
+// CustomerIDFromCtx extracts the customer ID from Fiber context
+func CustomerIDFromCtx(fiberCtx *fiber.Ctx) string {
+	if value := fiberCtx.Locals(CustomerIDKey); value != nil {
+		if customerID, ok := value.(string); ok {
+			return customerID
 		}
 	}
 	return ""
@@ -171,15 +171,15 @@ func (validator *JWKSValidator) Validate(ctx context.Context, token string) (Cla
 		return Claims{}, ErrInvalidToken
 	}
 
-	orgID := getStringClaim(mapClaims["orgId"])
-	if orgID == "" {
-		return Claims{}, errors.New("auth: orgId missing in token")
+	customerID := getStringClaim(mapClaims["customerId"])
+	if customerID == "" {
+		return Claims{}, errors.New("auth: customerId missing in token")
 	}
 
 	return Claims{
-		OrgID:   orgID,
-		Scopes:  extractScopes(mapClaims),
-		Subject: getStringClaim(mapClaims["sub"]),
+		CustomerID: customerID,
+		Scopes:     extractScopes(mapClaims),
+		Subject:    getStringClaim(mapClaims["sub"]),
 	}, nil
 }
 

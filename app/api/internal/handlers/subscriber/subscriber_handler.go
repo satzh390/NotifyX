@@ -84,7 +84,7 @@ type SubscriberPatchRequest struct {
 // @Failure 500 {object} map[string]string
 // @Router /subscribers [post]
 func (handler *SubscriberHandler) Create(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	body, err := httpx.ParseAndValidateBody[SubscriberRequest](fiberCtx)
 	if err != nil {
 		return err
@@ -97,7 +97,7 @@ func (handler *SubscriberHandler) Create(fiberCtx *fiber.Ctx) error {
 
 	subscriber := domain.Subscriber{
 		ID:         subscriberID,
-		OrgID:      orgID,
+		CustomerID: customerID,
 		Email:      body.Email,
 		Phone:      body.Phone,
 		PushToken:  body.PushToken,
@@ -120,7 +120,7 @@ func (handler *SubscriberHandler) Create(fiberCtx *fiber.Ctx) error {
 	}
 
 	// Fetch the created subscriber to get CreatedAt set by the store
-	created, err := handler.store.Get(context.Background(), orgID, subscriberID)
+	created, err := handler.store.Get(context.Background(), customerID, subscriberID)
 	if err != nil {
 		return fiber.NewError(http.StatusInternalServerError, "failed to retrieve created subscriber: "+err.Error())
 	}
@@ -141,13 +141,13 @@ func (handler *SubscriberHandler) Create(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /subscribers/{id} [get]
 func (handler *SubscriberHandler) Get(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	subscriberID := fiberCtx.Params("id")
 	if subscriberID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing subscriber id")
 	}
 
-	subscriber, err := handler.store.Get(context.Background(), orgID, subscriberID)
+	subscriber, err := handler.store.Get(context.Background(), customerID, subscriberID)
 	if err != nil {
 		if err == storage.ErrNotFound {
 			return fiber.NewError(http.StatusNotFound, "subscriber not found")
@@ -172,7 +172,7 @@ func (handler *SubscriberHandler) Get(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /subscribers/{id} [put]
 func (handler *SubscriberHandler) Put(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	subscriberID := fiberCtx.Params("id")
 	if subscriberID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing subscriber id")
@@ -194,12 +194,12 @@ func (handler *SubscriberHandler) Put(fiberCtx *fiber.Ctx) error {
 	}
 
 	// Check if subscriber exists
-	_, err = handler.store.Get(context.Background(), orgID, subscriberID)
+	_, err = handler.store.Get(context.Background(), customerID, subscriberID)
 	exists := err == nil
 
 	subscriber := domain.Subscriber{
 		ID:         subscriberID,
-		OrgID:      orgID,
+		CustomerID: customerID,
 		Email:      body.Email,
 		Phone:      body.Phone,
 		PushToken:  body.PushToken,
@@ -222,7 +222,7 @@ func (handler *SubscriberHandler) Put(fiberCtx *fiber.Ctx) error {
 	}
 
 	// Fetch the subscriber to get CreatedAt/UpdatedAt set by the store
-	updated, err := handler.store.Get(context.Background(), orgID, subscriberID)
+	updated, err := handler.store.Get(context.Background(), customerID, subscriberID)
 	if err != nil {
 		return fiber.NewError(http.StatusInternalServerError, "failed to retrieve subscriber: "+err.Error())
 	}
@@ -249,7 +249,7 @@ func (handler *SubscriberHandler) Put(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /subscribers/{id} [patch]
 func (handler *SubscriberHandler) Patch(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	subscriberID := fiberCtx.Params("id")
 	if subscriberID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing subscriber id")
@@ -261,7 +261,7 @@ func (handler *SubscriberHandler) Patch(fiberCtx *fiber.Ctx) error {
 		return err
 	}
 
-	existing, err := handler.store.Get(context.Background(), orgID, subscriberID)
+	existing, err := handler.store.Get(context.Background(), customerID, subscriberID)
 	if err != nil {
 		if err == storage.ErrNotFound {
 			return fiber.NewError(http.StatusNotFound, "subscriber not found")
@@ -294,13 +294,13 @@ func (handler *SubscriberHandler) Patch(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /subscribers/{id} [delete]
 func (handler *SubscriberHandler) Delete(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	subscriberID := fiberCtx.Params("id")
 	if subscriberID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing subscriber id")
 	}
 
-	if err := handler.store.Delete(context.Background(), orgID, subscriberID); err != nil {
+	if err := handler.store.Delete(context.Background(), customerID, subscriberID); err != nil {
 		if err == storage.ErrNotFound {
 			return fiber.NewError(http.StatusNotFound, "subscriber not found")
 		}
@@ -324,8 +324,8 @@ func (handler *SubscriberHandler) Delete(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /subscribers [get]
 func (handler *SubscriberHandler) List(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
-	opts := httpx.ParseListOptions(fiberCtx, orgID)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
+	opts := httpx.ParseListOptions(fiberCtx, customerID)
 
 	result, err := handler.store.List(context.Background(), opts)
 	if err != nil {

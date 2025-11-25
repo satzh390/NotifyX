@@ -14,13 +14,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type GroupRepository struct {
+type OrganizationRepository struct {
 	collection *mongoDriver.Collection
 }
 
-func (repo *GroupRepository) Put(ctx context.Context, group domain.Group) error {
-	filter := bson.M{"customerId": group.CustomerID, "groupId": group.ID}
-	updateMap, err := BuildUpdateMap(group)
+func (repo *OrganizationRepository) Put(ctx context.Context, org domain.Organization) error {
+	filter := bson.M{"id": org.ID}
+	updateMap, err := BuildUpdateMap(org)
 	if err != nil {
 		return err
 	}
@@ -29,9 +29,8 @@ func (repo *GroupRepository) Put(ctx context.Context, group domain.Group) error 
 	update := bson.M{
 		"$set": updateMap,
 		"$setOnInsert": bson.M{
-			"createdAt":  time.Now(),
-			"customerId": group.CustomerID,
-			"groupId":    group.ID,
+			"createdAt": time.Now(),
+			"id":        org.ID,
 		},
 	}
 	opts := options.Update().SetUpsert(true)
@@ -39,23 +38,22 @@ func (repo *GroupRepository) Put(ctx context.Context, group domain.Group) error 
 	return err
 }
 
-func (repo *GroupRepository) Get(ctx context.Context, customerID, groupID string) (domain.Group, error) {
-	filter := bson.M{"customerId": customerID, "groupId": groupID}
-	var group domain.Group
-	err := repo.collection.FindOne(ctx, filter).Decode(&group)
+func (repo *OrganizationRepository) Get(ctx context.Context, orgID string) (domain.Organization, error) {
+	filter := bson.M{"id": orgID}
+	var org domain.Organization
+	err := repo.collection.FindOne(ctx, filter).Decode(&org)
 	if errors.Is(err, mongoDriver.ErrNoDocuments) {
-		return domain.Group{}, storage.ErrNotFound
+		return domain.Organization{}, storage.ErrNotFound
 	}
-
-	return group, err
+	return org, err
 }
 
-func (repo *GroupRepository) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Group], error) {
+func (repo *OrganizationRepository) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Organization], error) {
 	filter := BuildBsonFilter(opts)
 	page, pageSize := PageOrDefaultParam(opts)
 	totalCount, err := repo.collection.CountDocuments(ctx, filter)
 	if err != nil {
-		return domain.ListResult[domain.Group]{}, fmt.Errorf("mongo: count: %w", err)
+		return domain.ListResult[domain.Organization]{}, fmt.Errorf("mongo: count: %w", err)
 	}
 
 	skip := int64(page * pageSize)
@@ -65,19 +63,19 @@ func (repo *GroupRepository) List(ctx context.Context, opts domain.ListOptions) 
 	findOpts.SetSort(BuildBsonSort(opts, map[string]int{"createdAt": -1}))
 	cursor, err := repo.collection.Find(ctx, filter, findOpts)
 	if err != nil {
-		return domain.ListResult[domain.Group]{}, fmt.Errorf("mongo: find: %w", err)
+		return domain.ListResult[domain.Organization]{}, fmt.Errorf("mongo: find: %w", err)
 	}
 
 	defer cursor.Close(ctx)
-	var groups []domain.Group
-	if err := cursor.All(ctx, &groups); err != nil {
-		return domain.ListResult[domain.Group]{}, fmt.Errorf("mongo: decode: %w", err)
+	var orgs []domain.Organization
+	if err := cursor.All(ctx, &orgs); err != nil {
+		return domain.ListResult[domain.Organization]{}, fmt.Errorf("mongo: decode: %w", err)
 	}
 
 	// Calculate total pages
 	totalPages := int(math.Ceil(float64(totalCount) / float64(pageSize)))
-	return domain.ListResult[domain.Group]{
-		Items: groups,
+	return domain.ListResult[domain.Organization]{
+		Items: orgs,
 		Pagination: domain.PaginationResult{
 			Page:       page,
 			PageSize:   pageSize,
@@ -87,8 +85,8 @@ func (repo *GroupRepository) List(ctx context.Context, opts domain.ListOptions) 
 	}, nil
 }
 
-func (repo *GroupRepository) Delete(ctx context.Context, customerID, groupID string) error {
-	filter := bson.M{"customerId": customerID, "groupId": groupID}
+func (repo *OrganizationRepository) Delete(ctx context.Context, orgID string) error {
+	filter := bson.M{"id": orgID}
 	result, err := repo.collection.DeleteOne(ctx, filter)
 	if err != nil {
 		return err
@@ -97,7 +95,5 @@ func (repo *GroupRepository) Delete(ctx context.Context, customerID, groupID str
 	if result.DeletedCount == 0 {
 		return storage.ErrNotFound
 	}
-
 	return nil
 }
-

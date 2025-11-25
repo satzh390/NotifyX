@@ -27,8 +27,8 @@ func TestRequireAuth(t *testing.T) {
 	app := fiber.New()
 	validator := &mockValidator{
 		claims: Claims{
-			OrgID:  "test-org",
-			Scopes: []string{"notify:read", "notify:write"},
+			CustomerID: "test-customer",
+			Scopes:    []string{"notify:read", "notify:write"},
 		},
 	}
 
@@ -81,8 +81,8 @@ func TestRequireAuth_InsufficientScope(t *testing.T) {
 	app := fiber.New()
 	validator := &mockValidator{
 		claims: Claims{
-			OrgID:  "test-org",
-			Scopes: []string{"notify:read"},
+			CustomerID: "test-customer",
+			Scopes:    []string{"notify:read"},
 		},
 	}
 
@@ -102,8 +102,8 @@ func TestRequireAuth_NoScopesRequired(t *testing.T) {
 	app := fiber.New()
 	validator := &mockValidator{
 		claims: Claims{
-			OrgID:  "test-org",
-			Scopes: []string{"notify:read"},
+			CustomerID: "test-customer",
+			Scopes:    []string{"notify:read"},
 		},
 	}
 
@@ -119,18 +119,18 @@ func TestRequireAuth_NoScopesRequired(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
-func TestOrgIDFromCtx(t *testing.T) {
+func TestCustomerIDFromCtx(t *testing.T) {
 	app := fiber.New()
 	validator := &mockValidator{
 		claims: Claims{
-			OrgID:  "test-org",
-			Scopes: []string{"notify:read"},
+			CustomerID: "test-customer",
+			Scopes:    []string{"notify:read"},
 		},
 	}
 
 	app.Get("/test", RequireAuth(validator, "notify:read"), func(c *fiber.Ctx) error {
-		orgID := OrgIDFromCtx(c)
-		return c.SendString(orgID)
+		customerID := CustomerIDFromCtx(c)
+		return c.SendString(customerID)
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
@@ -145,8 +145,8 @@ func TestRequireAuth_InvalidBearerFormat(t *testing.T) {
 	app := fiber.New()
 	validator := &mockValidator{
 		claims: Claims{
-			OrgID:  "test-org",
-			Scopes: []string{"notify:read"},
+			CustomerID: "test-customer",
+			Scopes:    []string{"notify:read"},
 		},
 	}
 

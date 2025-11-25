@@ -11,7 +11,7 @@ import (
 )
 
 type SubscriberCache interface {
-	Get(ctx context.Context, orgID, subscriberID string) (domain.Subscriber, bool)
+	Get(ctx context.Context, customerID, subscriberID string) (domain.Subscriber, bool)
 	Set(ctx context.Context, subscriber domain.Subscriber) error
 }
 
@@ -34,12 +34,12 @@ func NewRedisSubscriberCache(client *redis.Client, ttl time.Duration) *RedisSubs
 	return &RedisSubscriberCache{client: client, ttl: ttl}
 }
 
-func cacheKey(orgID, subscriberID string) string {
-	return "notifyx:subscriber:" + orgID + ":" + subscriberID
+func cacheKey(customerID, subscriberID string) string {
+	return "notifyx:subscriber:" + customerID + ":" + subscriberID
 }
 
-func (subscriberCache *RedisSubscriberCache) Get(ctx context.Context, orgID, subscriberID string) (domain.Subscriber, bool) {
-	payload, err := subscriberCache.client.Get(ctx, cacheKey(orgID, subscriberID)).Bytes()
+func (subscriberCache *RedisSubscriberCache) Get(ctx context.Context, customerID, subscriberID string) (domain.Subscriber, bool) {
+	payload, err := subscriberCache.client.Get(ctx, cacheKey(customerID, subscriberID)).Bytes()
 	if errors.Is(err, redis.Nil) || err != nil || len(payload) == 0 {
 		return domain.Subscriber{}, false
 	}
@@ -55,5 +55,5 @@ func (subscriberCache *RedisSubscriberCache) Set(ctx context.Context, sub domain
 	if err != nil {
 		return err
 	}
-	return subscriberCache.client.Set(ctx, cacheKey(sub.OrgID, sub.ID), payload, subscriberCache.ttl).Err()
+	return subscriberCache.client.Set(ctx, cacheKey(sub.CustomerID, sub.ID), payload, subscriberCache.ttl).Err()
 }

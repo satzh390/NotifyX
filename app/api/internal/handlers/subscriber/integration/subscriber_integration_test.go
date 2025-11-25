@@ -52,8 +52,8 @@ func TestIntegration_Subscriber_Create(t *testing.T) {
 		t.Fatalf("Failed to decode create response: %v", err)
 	}
 
-	if created.OrgID != "test-org-integration" {
-		t.Errorf("Expected orgID test-org-integration, got %s", created.OrgID)
+	if created.CustomerID != "test-customer-integration" {
+		t.Errorf("Expected customerID test-customer-integration, got %s", created.CustomerID)
 	}
 	if created.Email != "integration@example.com" {
 		t.Errorf("Expected email integration@example.com, got %s", created.Email)
@@ -74,7 +74,7 @@ func TestIntegration_Subscriber_Get(t *testing.T) {
 	subID := uuid.NewString()
 	sub := domain.Subscriber{
 		ID:        subID,
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Email:     "test@example.com",
 		CreatedAt: time.Now(),
 	}
@@ -132,7 +132,7 @@ func TestIntegration_Subscriber_Update(t *testing.T) {
 	subID := uuid.NewString()
 	sub := domain.Subscriber{
 		ID:        subID,
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Email:     "old@example.com",
 		CreatedAt: time.Now(),
 	}
@@ -182,7 +182,7 @@ func TestIntegration_Subscriber_Patch(t *testing.T) {
 	subID := uuid.NewString()
 	sub := domain.Subscriber{
 		ID:        subID,
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Email:     "old@example.com",
 		Phone:     "1234567890",
 		CreatedAt: time.Now(),
@@ -257,7 +257,7 @@ func TestIntegration_Subscriber_Delete(t *testing.T) {
 	subID := uuid.NewString()
 	sub := domain.Subscriber{
 		ID:        subID,
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Email:     "test@example.com",
 		CreatedAt: time.Now(),
 	}
@@ -302,7 +302,7 @@ func TestIntegration_Subscriber_List(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		sub := domain.Subscriber{
 			ID:        uuid.NewString(),
-			OrgID:     "test-org-integration",
+			CustomerID: "test-customer-integration",
 			Email:     fmt.Sprintf("test%d@example.com", i),
 			CreatedAt: time.Now().Add(time.Duration(i) * time.Second),
 		}
@@ -344,7 +344,7 @@ func TestIntegration_Subscriber_List_WithPagination(t *testing.T) {
 	for i := 0; i < 25; i++ {
 		sub := domain.Subscriber{
 			ID:        uuid.NewString(),
-			OrgID:     "test-org-integration",
+			CustomerID: "test-customer-integration",
 			Email:     fmt.Sprintf("test%d@example.com", i),
 			CreatedAt: time.Now().Add(time.Duration(i) * time.Second),
 		}
@@ -418,13 +418,13 @@ func TestIntegration_Subscriber_List_WithGroupFilter(t *testing.T) {
 	groupID := "group-123"
 	sub1 := domain.Subscriber{
 		ID:        uuid.NewString(),
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Groups:    []string{groupID},
 		CreatedAt: time.Now(),
 	}
 	sub2 := domain.Subscriber{
 		ID:        uuid.NewString(),
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Groups:    []string{"other-group"},
 		CreatedAt: time.Now(),
 	}
@@ -466,7 +466,7 @@ func TestIntegration_Subscriber_List_WithSorting(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		sub := domain.Subscriber{
 			ID:        uuid.NewString(),
-			OrgID:     "test-org-integration",
+			CustomerID: "test-customer-integration",
 			Email:     fmt.Sprintf("test%d@example.com", i),
 			CreatedAt: time.Now().Add(time.Duration(i) * time.Second),
 		}

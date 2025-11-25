@@ -56,7 +56,7 @@ type GroupPatchRequest struct {
 // @Failure 500 {object} map[string]string
 // @Router /groups [post]
 func (handler *GroupHandler) Create(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	body, err := httpx.ParseAndValidateBody[GroupRequest](fiberCtx)
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func (handler *GroupHandler) Create(fiberCtx *fiber.Ctx) error {
 
 	group := domain.Group{
 		ID:          groupID,
-		OrgID:       orgID,
+		CustomerID:  customerID,
 		Name:        body.Name,
 		Description: body.Description,
 		Subscribers: body.Subscribers,
@@ -96,13 +96,13 @@ func (handler *GroupHandler) Create(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /groups/{id} [get]
 func (handler *GroupHandler) Get(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	groupID := fiberCtx.Params("id")
 	if groupID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing group id")
 	}
 
-	group, err := handler.store.Get(context.Background(), orgID, groupID)
+	group, err := handler.store.Get(context.Background(), customerID, groupID)
 	if err != nil {
 		if err == storage.ErrNotFound {
 			return fiber.NewError(http.StatusNotFound, "group not found")
@@ -127,7 +127,7 @@ func (handler *GroupHandler) Get(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /groups/{id} [put]
 func (handler *GroupHandler) Put(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	groupID := fiberCtx.Params("id")
 	if groupID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing group id")
@@ -149,12 +149,12 @@ func (handler *GroupHandler) Put(fiberCtx *fiber.Ctx) error {
 	}
 
 	// Check if group exists
-	_, err = handler.store.Get(context.Background(), orgID, groupID)
+	_, err = handler.store.Get(context.Background(), customerID, groupID)
 	exists := err == nil
 
 	group := domain.Group{
 		ID:          groupID,
-		OrgID:       orgID,
+		CustomerID:  customerID,
 		Name:        body.Name,
 		Description: body.Description,
 		Subscribers: body.Subscribers,
@@ -187,7 +187,7 @@ func (handler *GroupHandler) Put(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /groups/{id} [patch]
 func (handler *GroupHandler) Patch(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	groupID := fiberCtx.Params("id")
 	if groupID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing group id")
@@ -199,7 +199,7 @@ func (handler *GroupHandler) Patch(fiberCtx *fiber.Ctx) error {
 		return err
 	}
 
-	existing, err := handler.store.Get(context.Background(), orgID, groupID)
+	existing, err := handler.store.Get(context.Background(), customerID, groupID)
 	if err != nil {
 		if err == storage.ErrNotFound {
 			return fiber.NewError(http.StatusNotFound, "group not found")
@@ -232,13 +232,13 @@ func (handler *GroupHandler) Patch(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /groups/{id} [delete]
 func (handler *GroupHandler) Delete(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	groupID := fiberCtx.Params("id")
 	if groupID == "" {
 		return fiber.NewError(http.StatusBadRequest, "missing group id")
 	}
 
-	if err := handler.store.Delete(context.Background(), orgID, groupID); err != nil {
+	if err := handler.store.Delete(context.Background(), customerID, groupID); err != nil {
 		if err == storage.ErrNotFound {
 			return fiber.NewError(http.StatusNotFound, "group not found")
 		}
@@ -262,8 +262,8 @@ func (handler *GroupHandler) Delete(fiberCtx *fiber.Ctx) error {
 // @Failure 500 {object} map[string]string
 // @Router /groups [get]
 func (handler *GroupHandler) List(fiberCtx *fiber.Ctx) error {
-	orgID := httpx.OrgIDFromCtx(fiberCtx)
-	opts := httpx.ParseListOptions(fiberCtx, orgID)
+	customerID := httpx.CustomerIDFromCtx(fiberCtx)
+	opts := httpx.ParseListOptions(fiberCtx, customerID)
 
 	result, err := handler.store.List(context.Background(), opts)
 	if err != nil {

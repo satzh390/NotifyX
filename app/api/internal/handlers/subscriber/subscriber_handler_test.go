@@ -24,7 +24,7 @@ func setupSubscriberTestApp() (*fiber.App, *MockSubscriberStore) {
 
 	api := app.Group("/api/v1")
 	api.Use(func(c *fiber.Ctx) error {
-		c.Locals("orgId", "test-org")
+		c.Locals("customerId", "test-customer")
 		return c.Next()
 	})
 
@@ -43,14 +43,14 @@ func TestSubscriberHandler_Create(t *testing.T) {
 	app, store := setupSubscriberTestApp()
 
 	store.On("Put", mock.Anything, mock.MatchedBy(func(s domain.Subscriber) bool {
-		return s.Email == "test@example.com" && s.OrgID == "test-org"
+		return s.Email == "test@example.com" && s.CustomerID == "test-customer"
 	})).Return(nil).Once()
 
 	// Mock Get to return the created subscriber (handler calls Get after Put)
 	store.On("Get", mock.Anything, "test-org", mock.AnythingOfType("string")).Return(func(ctx context.Context, orgID string, id string) domain.Subscriber {
 		return domain.Subscriber{
 			ID:    id,
-			OrgID: "test-org",
+			CustomerID: "test-customer",
 			Email: "test@example.com",
 		}
 	}, nil).Once()
@@ -75,7 +75,7 @@ func TestSubscriberHandler_Create(t *testing.T) {
 	err = json.NewDecoder(resp.Body).Decode(&subscriber)
 	assert.NoError(t, err)
 	assert.Equal(t, "test@example.com", subscriber.Email)
-	assert.Equal(t, "test-org", subscriber.OrgID)
+	assert.Equal(t, "test-customer", subscriber.CustomerID)
 
 	store.AssertExpectations(t)
 }
@@ -121,7 +121,7 @@ func TestSubscriberHandler_Get(t *testing.T) {
 	subID := uuid.NewString()
 	expectedSubscriber := domain.Subscriber{
 		ID:    subID,
-		OrgID: "test-org",
+		CustomerID: "test-customer",
 		Email: "test@example.com",
 	}
 
@@ -216,7 +216,7 @@ func TestSubscriberHandler_Put_Create(t *testing.T) {
 	})).Return(nil).Once()
 	store.On("Get", mock.Anything, "test-org", subID).Return(domain.Subscriber{
 		ID:    subID,
-		OrgID: "test-org",
+		CustomerID: "test-customer",
 		Email: "new@example.com",
 	}, nil).Once()
 
@@ -246,7 +246,7 @@ func TestSubscriberHandler_Patch(t *testing.T) {
 	subID := uuid.NewString()
 	existingSubscriber := domain.Subscriber{
 		ID:    subID,
-		OrgID: "test-org",
+		CustomerID: "test-customer",
 		Email: "old@example.com",
 	}
 

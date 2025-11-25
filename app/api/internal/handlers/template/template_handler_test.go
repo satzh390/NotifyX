@@ -23,7 +23,7 @@ func setupTemplateTestApp() (*fiber.App, *MockTemplateStore) {
 
 	api := app.Group("/api/v1")
 	api.Use(func(c *fiber.Ctx) error {
-		c.Locals("orgId", "test-org")
+		c.Locals("customerId", "test-customer")
 		return c.Next()
 	})
 
@@ -41,7 +41,7 @@ func TestTemplateHandler_Create(t *testing.T) {
 	app, store := setupTemplateTestApp()
 
 	store.On("Put", mock.Anything, mock.MatchedBy(func(tpl domain.Template) bool {
-		return tpl.Name == "Order Confirmation" && tpl.OrgID == "test-org"
+		return tpl.Name == "Order Confirmation" && tpl.CustomerID == "test-customer"
 	})).Return(nil).Once()
 
 	body := map[string]interface{}{
@@ -65,7 +65,7 @@ func TestTemplateHandler_Create(t *testing.T) {
 	err = json.NewDecoder(resp.Body).Decode(&template)
 	assert.NoError(t, err)
 	assert.Equal(t, "Order Confirmation", template.Name)
-	assert.Equal(t, "test-org", template.OrgID)
+	assert.Equal(t, "test-customer", template.CustomerID)
 	assert.Equal(t, "Your order has been confirmed", template.Content.Body)
 
 	store.AssertExpectations(t)
@@ -124,7 +124,7 @@ func TestTemplateHandler_Get(t *testing.T) {
 	templateID := uuid.NewString()
 	expectedTemplate := domain.Template{
 		ID:      templateID,
-		OrgID:   "test-org",
+		CustomerID: "test-customer",
 		Name:    "Test Template",
 		Channel: domain.ChannelEmail,
 		Content: domain.TemplateContent{
@@ -172,7 +172,7 @@ func TestTemplateHandler_Put(t *testing.T) {
 	templateID := uuid.NewString()
 	existingTemplate := domain.Template{
 		ID:      templateID,
-		OrgID:   "test-org",
+		CustomerID: "test-customer",
 		Name:    "Old Name",
 		Channel: domain.ChannelEmail,
 		Content: domain.TemplateContent{
@@ -189,7 +189,7 @@ func TestTemplateHandler_Put(t *testing.T) {
 	})).Return(nil).Once()
 	store.On("Get", mock.Anything, "test-org", templateID).Return(domain.Template{
 		ID:      templateID,
-		OrgID:   "test-org",
+		CustomerID: "test-customer",
 		Name:    "New Name",
 		Channel: domain.ChannelEmail,
 		Content: domain.TemplateContent{
@@ -236,7 +236,7 @@ func TestTemplateHandler_Put_Create(t *testing.T) {
 	})).Return(nil).Once()
 	store.On("Get", mock.Anything, "test-org", templateID).Return(domain.Template{
 		ID:      templateID,
-		OrgID:   "test-org",
+		CustomerID: "test-customer",
 		Name:    "New Template",
 		Channel: domain.ChannelEmail,
 		Content: domain.TemplateContent{
@@ -272,7 +272,7 @@ func TestTemplateHandler_Patch(t *testing.T) {
 	templateID := uuid.NewString()
 	existingTemplate := domain.Template{
 		ID:      templateID,
-		OrgID:   "test-org",
+		CustomerID: "test-customer",
 		Name:    "Old Name",
 		Channel: domain.ChannelEmail,
 		Content: domain.TemplateContent{

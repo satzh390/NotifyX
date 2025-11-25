@@ -21,7 +21,7 @@ const (
 
 type Subscriber struct {
 	ID          string            `json:"subscriberId" bson:"subscriberId" immutable:"true"`
-	OrgID       string            `json:"orgId" bson:"orgId" immutable:"true"`
+	CustomerID  string            `json:"customerId" bson:"customerId" immutable:"true"`
 	Email       string            `json:"email,omitempty" bson:"email,omitempty"`
 	Phone       string            `json:"phone,omitempty" bson:"phone,omitempty"`
 	PushToken   string            `json:"pushToken,omitempty" bson:"pushToken,omitempty"`
@@ -46,7 +46,7 @@ type TimeWindow struct {
 
 type Group struct {
 	ID          string            `json:"groupId" bson:"groupId" immutable:"true"`
-	OrgID       string            `json:"orgId" bson:"orgId" immutable:"true"`
+	CustomerID  string            `json:"customerId" bson:"customerId" immutable:"true"`
 	Name        string            `json:"name" bson:"name"`
 	Description string            `json:"description,omitempty" bson:"description,omitempty"`
 	Subscribers []string          `json:"subscribers" bson:"subscribers"`
@@ -73,7 +73,7 @@ type TemplateContent struct {
 // Template represents a notification template with channel-specific content and translations
 type Template struct {
 	ID           string                     `json:"id" bson:"id" immutable:"true"`
-	OrgID        string                     `json:"orgId" bson:"orgId" immutable:"true"`
+	CustomerID   string                     `json:"customerId" bson:"customerId" immutable:"true"`
 	Name         string                     `json:"name" bson:"name"`
 	Channel      ChannelType                `json:"channel" bson:"channel" immutable:"true"`
 	Version      int                        `json:"version" bson:"version"`
@@ -86,7 +86,7 @@ type Template struct {
 
 type Rule struct {
 	EventType         string                 `json:"eventType" bson:"eventType" immutable:"true"`
-	OrgID             string                 `json:"orgId" bson:"orgId" immutable:"true"`
+	CustomerID        string                 `json:"customerId" bson:"customerId" immutable:"true"`
 	Channels          []ChannelType          `json:"channels" bson:"channels"`
 	DefaultRecipients Recipients             `json:"defaultRecipients" bson:"defaultRecipients"`
 	TemplateRefs      map[ChannelType]string `json:"templateRefs" bson:"templateRefs"`
@@ -96,7 +96,7 @@ type Rule struct {
 
 type Event struct {
 	ID         string            `json:"eventId" bson:"eventId"`
-	OrgID      string            `json:"orgId" bson:"orgId"`
+	CustomerID string            `json:"customerId" bson:"customerId"`
 	Type       string            `json:"type" bson:"type"`
 	Recipients Recipients        `json:"recipients" bson:"recipients"`
 	Payload    map[string]any    `json:"payload" bson:"payload"`
@@ -115,7 +115,7 @@ type DeliveryTask struct {
 	TaskID         string            `json:"taskId" bson:"taskId"`
 	IdempotencyKey string            `json:"idempotencyKey" bson:"idempotencyKey"`
 	EventID        string            `json:"eventId" bson:"eventId"`
-	OrgID          string            `json:"orgId" bson:"orgId"`
+	CustomerID     string            `json:"customerId" bson:"customerId"`
 	Subscriber     Subscriber        `json:"subscriber" bson:"subscriber"`
 	Channel        ChannelType       `json:"channel" bson:"channel"`
 	TemplateRef    string            `json:"templateRef" bson:"templateRef"`
@@ -125,14 +125,14 @@ type DeliveryTask struct {
 }
 
 type DeliveryLog struct {
-	TaskID    string            `json:"taskId" bson:"taskId"`
-	OrgID     string            `json:"orgId" bson:"orgId"`
-	EventID   string            `json:"eventId" bson:"eventId"`
-	Channel   ChannelType       `json:"channel" bson:"channel"`
-	Status    EventStatus       `json:"status" bson:"status"`
-	Error     string            `json:"error,omitempty" bson:"error,omitempty"`
-	Timestamp time.Time         `json:"timestamp" bson:"timestamp"`
-	Metadata  map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
+	TaskID     string            `json:"taskId" bson:"taskId"`
+	CustomerID string            `json:"customerId" bson:"customerId"`
+	EventID    string            `json:"eventId" bson:"eventId"`
+	Channel    ChannelType       `json:"channel" bson:"channel"`
+	Status     EventStatus       `json:"status" bson:"status"`
+	Error      string            `json:"error,omitempty" bson:"error,omitempty"`
+	Timestamp  time.Time         `json:"timestamp" bson:"timestamp"`
+	Metadata   map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
 }
 
 type PaginationParams struct {
@@ -172,4 +172,32 @@ type ListOptions struct {
 type ListResult[T any] struct {
 	Items      []T              `json:"items"`
 	Pagination PaginationResult `json:"pagination"`
+}
+
+// OrganizationType represents the type of organization
+type OrganizationType string
+
+const (
+	OrganizationTypeCompany      OrganizationType = "company"
+	OrganizationTypeSaaSProvider OrganizationType = "saasProvider"
+)
+
+// Organization represents an organization entity
+type Organization struct {
+	ID        string           `json:"id" bson:"id" immutable:"true"`
+	Name      string           `json:"name" bson:"name"`
+	Type      OrganizationType `json:"type" bson:"type"`
+	CreatedAt time.Time        `json:"createdAt" bson:"createdAt" immutable:"true"`
+	UpdatedAt time.Time        `json:"updatedAt" bson:"updatedAt"`
+}
+
+// Customer represents a customer entity
+type Customer struct {
+	ID        string            `json:"id" bson:"id" immutable:"true"`
+	OrgID     string            `json:"orgId" bson:"orgId" immutable:"true"`
+	Name      string            `json:"name" bson:"name"`
+	Logo      string            `json:"logo,omitempty" bson:"logo,omitempty"`
+	Metadata  map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
+	CreatedAt time.Time         `json:"createdAt" bson:"createdAt" immutable:"true"`
+	UpdatedAt time.Time         `json:"updatedAt" bson:"updatedAt"`
 }

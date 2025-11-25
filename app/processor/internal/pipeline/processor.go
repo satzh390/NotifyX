@@ -12,6 +12,7 @@ import (
 	"github.com/segmentio/kafka-go"
 
 	"github.com/notifyx/core/domain"
+	"github.com/notifyx/core/resolver"
 	"github.com/notifyx/core/storage"
 	"github.com/notifyx/processor/internal/event"
 	"github.com/notifyx/processor/internal/fanout"
@@ -20,23 +21,25 @@ import (
 )
 
 type Processor struct {
-	reader   *kafka.Reader
-	dlq      *kafka.Writer
-	resolver *recipients.Resolver
-	filters  *filter.PreferencesFilter
-	fanout   fanout.Publisher
-	stores   storage.Stores
-	logger   *slog.Logger
+	reader       *kafka.Reader
+	dlq          *kafka.Writer
+	resolver     *recipients.Resolver
+	ruleResolver *resolver.RuleResolver
+	filters      *filter.PreferencesFilter
+	fanout       fanout.Publisher
+	stores       storage.Stores
+	logger       *slog.Logger
 }
 
 type Options struct {
-	Reader   *kafka.Reader
-	DLQ      *kafka.Writer
-	Resolver *recipients.Resolver
-	Filter   *filter.PreferencesFilter
-	Fanout   fanout.Publisher
-	Stores   storage.Stores
-	Logger   *slog.Logger
+	Reader       *kafka.Reader
+	DLQ          *kafka.Writer
+	Resolver     *recipients.Resolver
+	RuleResolver *resolver.RuleResolver
+	Filter       *filter.PreferencesFilter
+	Fanout       fanout.Publisher
+	Stores       storage.Stores
+	Logger       *slog.Logger
 }
 
 func NewProcessor(opts Options) *Processor {
@@ -45,13 +48,14 @@ func NewProcessor(opts Options) *Processor {
 		logger = slog.Default()
 	}
 	return &Processor{
-		reader:   opts.Reader,
-		dlq:      opts.DLQ,
-		resolver: opts.Resolver,
-		filters:  opts.Filter,
-		fanout:   opts.Fanout,
-		stores:   opts.Stores,
-		logger:   logger,
+		reader:       opts.Reader,
+		dlq:          opts.DLQ,
+		resolver:     opts.Resolver,
+		ruleResolver: opts.RuleResolver,
+		filters:      opts.Filter,
+		fanout:       opts.Fanout,
+		stores:       opts.Stores,
+		logger:       logger,
 	}
 }
 
@@ -88,7 +92,12 @@ func (processor *Processor) handleMessage(ctx context.Context, msg kafka.Message
 		return err
 	}
 
-	rule, err := processor.stores.Rules.Get(ctx, env.OrgID, env.Type)
+	// Use RuleResolver to get merged rule (global + customer override)
+	if processor.ruleResolver == nil {
+		return fmt.Errorf("rule resolver is not set")
+	}
+
+	rule, err := processor.ruleResolver.Resolve(ctx, env.CustomerID, env.Type)
 	if err != nil {
 		return fmt.Errorf("rule lookup: %w", err)
 	}
@@ -106,7 +115,7 @@ func (processor *Processor) handleMessage(ctx context.Context, msg kafka.Message
 		if len(chunk) == 0 {
 			return nil
 		}
-		count, err := processor.processChunk(ctx, chunk, rule, env)
+		count, err := processor.processChunk(ctx, chunk, rule, env, env.CustomerID)
 		if err != nil {
 			return err
 		}
@@ -115,7 +124,7 @@ func (processor *Processor) handleMessage(ctx context.Context, msg kafka.Message
 		return nil
 	}
 
-	err = processor.resolver.Stream(ctx, env.OrgID, recipients, func(subscriber domain.Subscriber) error {
+	err = processor.resolver.Stream(ctx, env.CustomerID, recipients, func(subscriber domain.Subscriber) error {
 		// For direct recipients (empty ID), use email/phone for deduplication
 		// For regular subscribers, use ID
 		key := getSubscriberIdentifier(subscriber)
@@ -211,7 +220,7 @@ func validateRecipientLimits(recipients domain.Recipients) error {
 	return nil
 }
 
-func (processor *Processor) processChunk(ctx context.Context, subscribers []domain.Subscriber, rule domain.Rule, env event.CloudEventEnvelope[map[string]any]) (int, error) {
+func (processor *Processor) processChunk(ctx context.Context, subscribers []domain.Subscriber, rule domain.Rule, env event.CloudEventEnvelope[map[string]any], customerID string) (int, error) {
 	filtered := processor.filters.Apply(subscribers, rule)
 	if len(filtered) == 0 {
 		return 0, nil
@@ -225,12 +234,12 @@ func (processor *Processor) processChunk(ctx context.Context, subscribers []doma
 				continue
 			}
 			subscriberID := getSubscriberIdentifier(entry.Subscriber)
-			taskID, idempotencyKey := generateTaskID(env.EventID(), env.OrgID, subscriberID, channel)
+			taskID, idempotencyKey := generateTaskID(env.EventID(), customerID, subscriberID, channel)
 			task := domain.DeliveryTask{
 				TaskID:         taskID,
 				IdempotencyKey: idempotencyKey,
 				EventID:        env.EventID(),
-				OrgID:          env.OrgID,
+				CustomerID:     customerID,
 				Subscriber:     entry.Subscriber,
 				Channel:        channel,
 				TemplateRef:    templateRef,
@@ -269,11 +278,11 @@ func getSubscriberIdentifier(subscriber domain.Subscriber) string {
 }
 
 // generateTaskID creates a deterministic TaskID and idempotency key
-// Format: eventId-orgId-subId-channel
+// Format: eventId-customerId-subId-channel
 // The idempotency key is a SHA256 hash of the same components for shorter storage
-func generateTaskID(eventID, orgID, subscriberID string, channel domain.ChannelType) (taskID, idempotencyKey string) {
-	// Create deterministic TaskID: eventId:orgId:subId:channel
-	taskID = fmt.Sprintf("%s:%s:%s:%s", eventID, orgID, subscriberID, channel)
+func generateTaskID(eventID, customerID, subscriberID string, channel domain.ChannelType) (taskID, idempotencyKey string) {
+	// Create deterministic TaskID: eventId:customerId:subId:channel
+	taskID = fmt.Sprintf("%s:%s:%s:%s", eventID, customerID, subscriberID, channel)
 
 	// Create idempotency key as hash for shorter storage
 	hash := sha256.Sum256([]byte(taskID))

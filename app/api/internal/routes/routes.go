@@ -2,7 +2,9 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/notifyx/api/internal/handlers/customer"
 	"github.com/notifyx/api/internal/handlers/group"
+	"github.com/notifyx/api/internal/handlers/organization"
 	"github.com/notifyx/api/internal/handlers/rule"
 	"github.com/notifyx/api/internal/handlers/subscriber"
 	"github.com/notifyx/api/internal/handlers/template"
@@ -80,4 +82,36 @@ func RegisterRoutes(app *fiber.App, stores storage.Stores, validator httpx.AuthV
 		httpx.RequireAuth(validator, notifyWritePermission),
 		templateHandler.Patch)
 	templates.Delete("/:id", httpx.RequireAuth(validator, notifyWritePermission), templateHandler.Delete)
+
+	// Organizations CRUD
+	organizationHandler := organization.NewOrganizationHandler(stores.Organizations)
+	organizations := api.Group("/organizations", httpx.RequireAuth(validator, notifyReadPermission))
+	organizations.Post("",
+		httpx.RequireAuth(validator, notifyWritePermission),
+		organizationHandler.Create)
+	organizations.Get("/:id", organizationHandler.Get)
+	organizations.Put("/:id",
+		httpx.RequireAuth(validator, notifyWritePermission),
+		organizationHandler.Put)
+	organizations.Patch("/:id",
+		httpx.RequireAuth(validator, notifyWritePermission),
+		organizationHandler.Patch)
+	organizations.Delete("/:id", httpx.RequireAuth(validator, notifyWritePermission), organizationHandler.Delete)
+	organizations.Get("", organizationHandler.List)
+
+	// Customers CRUD
+	customerHandler := customer.NewCustomerHandler(stores.Customers)
+	customers := api.Group("/customers", httpx.RequireAuth(validator, notifyReadPermission))
+	customers.Post("",
+		httpx.RequireAuth(validator, notifyWritePermission),
+		customerHandler.Create)
+	customers.Get("/:id", customerHandler.Get)
+	customers.Put("/:id",
+		httpx.RequireAuth(validator, notifyWritePermission),
+		customerHandler.Put)
+	customers.Patch("/:id",
+		httpx.RequireAuth(validator, notifyWritePermission),
+		customerHandler.Patch)
+	customers.Delete("/:id", httpx.RequireAuth(validator, notifyWritePermission), customerHandler.Delete)
+	customers.Get("", customerHandler.List)
 }
