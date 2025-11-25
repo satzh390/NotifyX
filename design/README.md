@@ -198,7 +198,7 @@ UI features:
 }
 ```
 
-**Without recipients (uses rule defaults or interested subscribers):**
+**Without recipients (uses interested subscribers):**
 ```json
 {
   "customerId":"acme-store",
