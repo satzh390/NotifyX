@@ -12,22 +12,22 @@ type MockGroupStore struct {
 	mock.Mock
 }
 
-func (m *MockGroupStore) Put(ctx context.Context, group domain.Group) error {
-	args := m.Called(ctx, group)
+func (mockStore *MockGroupStore) Put(ctx context.Context, group domain.Group) error {
+	args := mockStore.Called(ctx, group)
 	return args.Error(0)
 }
 
-func (m *MockGroupStore) Get(ctx context.Context, orgID, groupID string) (domain.Group, error) {
-	args := m.Called(ctx, orgID, groupID)
+func (mockStore *MockGroupStore) Get(ctx context.Context, customerID, groupID string) (domain.Group, error) {
+	args := mockStore.Called(ctx, customerID, groupID)
 	return args.Get(0).(domain.Group), args.Error(1)
 }
 
-func (m *MockGroupStore) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Group], error) {
-	args := m.Called(ctx, opts)
+func (mockStore *MockGroupStore) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Group], error) {
+	args := mockStore.Called(ctx, opts)
 	return args.Get(0).(domain.ListResult[domain.Group]), args.Error(1)
 }
 
-func (m *MockGroupStore) Delete(ctx context.Context, orgID, groupID string) error {
-	args := m.Called(ctx, orgID, groupID)
+func (mockStore *MockGroupStore) Delete(ctx context.Context, customerID, groupID string) error {
+	args := mockStore.Called(ctx, customerID, groupID)
 	return args.Error(0)
 }

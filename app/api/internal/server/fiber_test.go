@@ -14,10 +14,10 @@ import (
 
 type mockValidator struct{}
 
-func (m *mockValidator) Validate(ctx context.Context, token string) (httpx.Claims, error) {
+func (validator *mockValidator) Validate(ctx context.Context, token string) (httpx.Claims, error) {
 	return httpx.Claims{
-		OrgID:  "test-org",
-		Scopes: []string{"notify:read", "notify:write"},
+		CustomerID: "test-customer",
+		Scopes:     []string{"notify:read", "notify:write"},
 	}, nil
 }
 

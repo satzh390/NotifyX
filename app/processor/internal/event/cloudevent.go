@@ -28,7 +28,7 @@ type CloudEventEnvelope[T any] struct {
 	DataContentType string            `json:"datacontenttype,omitempty"`
 	DataSchema      string            `json:"dataschema,omitempty"`
 	Data            T                 `json:"data"`
-	OrgID           string            `json:"orgId"`
+	CustomerID      string            `json:"customerId"`
 	Recipients      domain.Recipients `json:"recipients"`
 	Payload         map[string]any    `json:"payload,omitempty"`
 	Meta            map[string]string `json:"meta,omitempty"`
@@ -46,8 +46,8 @@ func (envelope *CloudEventEnvelope[T]) EventID() string {
 
 func (envelope *CloudEventEnvelope[T]) Validate() error {
 	switch {
-	case envelope.OrgID == "":
-		return errors.New("event: orgId is required")
+	case envelope.CustomerID == "":
+		return errors.New("event: customerId is required")
 	case envelope.Type == "":
 		return errors.New("event: type is required")
 	case envelope.SpecVersion == "":

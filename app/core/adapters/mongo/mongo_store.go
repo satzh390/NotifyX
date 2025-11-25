@@ -37,10 +37,12 @@ func NewStoreSet(ctx context.Context, opts Options) (storage.Stores, func(contex
 	}
 
 	stores := storage.Stores{
-		Subscribers: &SubscriberRepository{collection: db.Collection(prefix + "subscribers")},
-		Groups:      &GroupRepository{collection: db.Collection(prefix + "groups")},
-		Rules:       &RuleRepository{collection: db.Collection(prefix + "rules")},
-		Templates:   &TemplateRepository{collection: db.Collection(prefix + "templates")},
+		Subscribers:   &SubscriberRepository{collection: db.Collection(prefix + "subscribers")},
+		Groups:        &GroupRepository{collection: db.Collection(prefix + "groups")},
+		Rules:         &RuleRepository{collection: db.Collection(prefix + "rules")},
+		Templates:     &TemplateRepository{collection: db.Collection(prefix + "templates")},
+		Organizations: &OrganizationRepository{collection: db.Collection(prefix + "organizations")},
+		Customers:     &CustomerRepository{collection: db.Collection(prefix + "customers")},
 	}
 
 	cleanup := func(ctx context.Context) error {

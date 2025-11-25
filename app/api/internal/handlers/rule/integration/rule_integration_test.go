@@ -48,8 +48,8 @@ func TestIntegration_Rule_Create(t *testing.T) {
 	if created.EventType != "order.created" {
 		t.Errorf("Expected eventType order.created, got %s", created.EventType)
 	}
-	if created.OrgID != "test-org-integration" {
-		t.Errorf("Expected orgID test-org-integration, got %s", created.OrgID)
+	if created.CustomerID != "test-customer-integration" {
+		t.Errorf("Expected customerID test-customer-integration, got %s", created.CustomerID)
 	}
 }
 
@@ -67,7 +67,7 @@ func TestIntegration_Rule_Get(t *testing.T) {
 	eventType := "order.created"
 	rule := domain.Rule{
 		EventType: eventType,
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Channels:  []domain.ChannelType{domain.ChannelEmail},
 		CreatedAt: time.Now(),
 	}
@@ -125,7 +125,7 @@ func TestIntegration_Rule_Update(t *testing.T) {
 	eventType := "order.created"
 	rule := domain.Rule{
 		EventType: eventType,
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Channels:  []domain.ChannelType{domain.ChannelEmail},
 		CreatedAt: time.Now(),
 	}
@@ -166,7 +166,7 @@ func TestIntegration_Rule_Patch(t *testing.T) {
 	eventType := "order.created"
 	rule := domain.Rule{
 		EventType: eventType,
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Channels:  []domain.ChannelType{domain.ChannelEmail},
 		CreatedAt: time.Now(),
 	}
@@ -236,7 +236,7 @@ func TestIntegration_Rule_Delete(t *testing.T) {
 	eventType := "order.created"
 	rule := domain.Rule{
 		EventType: eventType,
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		CreatedAt: time.Now(),
 	}
 	if err := stores.Rules.Put(ctx, rule); err != nil {
@@ -280,12 +280,12 @@ func TestIntegration_Rule_List(t *testing.T) {
 	store := stores.Rules
 	store.Put(ctx, domain.Rule{
 		EventType: "order.created",
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		CreatedAt: time.Now(),
 	})
 	store.Put(ctx, domain.Rule{
 		EventType: "order.updated",
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		CreatedAt: time.Now(),
 	})
 
@@ -324,12 +324,12 @@ func TestIntegration_Rule_List_WithSorting(t *testing.T) {
 	store := stores.Rules
 	store.Put(ctx, domain.Rule{
 		EventType: "order.created",
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		CreatedAt: time.Now(),
 	})
 	store.Put(ctx, domain.Rule{
 		EventType: "order.updated",
-		OrgID:     "test-org-integration",
+		CustomerID: "test-customer-integration",
 		CreatedAt: time.Now().Add(time.Second),
 	})
 

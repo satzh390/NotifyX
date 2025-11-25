@@ -8,6 +8,7 @@ volumes:
   mongo_data:
   kafka_data:
   localstack_data:
+  redis_data:
 
 services:
   mongo:
@@ -48,6 +49,17 @@ services:
       - kafka_data:/var/lib/kafka/data
     networks:
       - notifyx-net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - notifyx-net
+    command: redis-server --appendonly yes
 
   localstack:
     image: localstack/localstack:3.3

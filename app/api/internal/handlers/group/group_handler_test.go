@@ -22,7 +22,7 @@ func setupGroupTestApp() (*fiber.App, *MockGroupStore) {
 
 	api := app.Group("/api/v1")
 	api.Use(func(c *fiber.Ctx) error {
-		c.Locals("orgId", "test-org")
+		c.Locals("customerId", "test-customer")
 		return c.Next()
 	})
 
@@ -42,7 +42,7 @@ func TestGroupHandler_Create(t *testing.T) {
 
 	// Mock Put to succeed
 	store.On("Put", mock.Anything, mock.MatchedBy(func(g domain.Group) bool {
-		return g.Name == "Test Group" && g.OrgID == "test-org"
+		return g.Name == "Test Group" && g.CustomerID == "test-customer"
 	})).Return(nil).Once()
 
 	body := map[string]interface{}{
@@ -63,7 +63,7 @@ func TestGroupHandler_Create(t *testing.T) {
 	err = json.NewDecoder(resp.Body).Decode(&group)
 	assert.NoError(t, err)
 	assert.Equal(t, "Test Group", group.Name)
-	assert.Equal(t, "test-org", group.OrgID)
+		assert.Equal(t, "test-customer", group.CustomerID)
 
 	store.AssertExpectations(t)
 }
@@ -91,12 +91,12 @@ func TestGroupHandler_Get(t *testing.T) {
 	groupID := uuid.NewString()
 	expectedGroup := domain.Group{
 		ID:          groupID,
-		OrgID:       "test-org",
+		CustomerID:  "test-customer",
 		Name:        "Test Group",
 		Description: "Test Description",
 	}
 
-	store.On("Get", mock.Anything, "test-org", groupID).Return(expectedGroup, nil).Once()
+	store.On("Get", mock.Anything, "test-customer", groupID).Return(expectedGroup, nil).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/"+groupID, nil)
 	resp, err := app.Test(req)
@@ -116,7 +116,7 @@ func TestGroupHandler_Get(t *testing.T) {
 func TestGroupHandler_Get_NotFound(t *testing.T) {
 	app, store := setupGroupTestApp()
 
-	store.On("Get", mock.Anything, "test-org", "non-existent").Return(domain.Group{}, storage.ErrNotFound).Once()
+	store.On("Get", mock.Anything, "test-customer", "non-existent").Return(domain.Group{}, storage.ErrNotFound).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/non-existent", nil)
 	resp, err := app.Test(req)
@@ -132,13 +132,13 @@ func TestGroupHandler_Put(t *testing.T) {
 
 	groupID := uuid.NewString()
 	existingGroup := domain.Group{
-		ID:    groupID,
-		OrgID: "test-org",
-		Name:  "Old Name",
+		ID:         groupID,
+		CustomerID: "test-customer",
+		Name:       "Old Name",
 	}
 
 	// Test PUT with existing group (update)
-	store.On("Get", mock.Anything, "test-org", groupID).Return(existingGroup, nil).Once()
+	store.On("Get", mock.Anything, "test-customer", groupID).Return(existingGroup, nil).Once()
 	store.On("Put", mock.Anything, mock.MatchedBy(func(g domain.Group) bool {
 		return g.ID == groupID && g.Name == "New Name"
 	})).Return(nil).Once()
@@ -171,7 +171,7 @@ func TestGroupHandler_Put_Create(t *testing.T) {
 	groupID := uuid.NewString()
 
 	// Test PUT with non-existing group (create)
-	store.On("Get", mock.Anything, "test-org", groupID).Return(domain.Group{}, storage.ErrNotFound).Once()
+	store.On("Get", mock.Anything, "test-customer", groupID).Return(domain.Group{}, storage.ErrNotFound).Once()
 	store.On("Put", mock.Anything, mock.MatchedBy(func(g domain.Group) bool {
 		return g.ID == groupID && g.Name == "New Group"
 	})).Return(nil).Once()
@@ -197,12 +197,12 @@ func TestGroupHandler_Patch(t *testing.T) {
 
 	groupID := uuid.NewString()
 	existingGroup := domain.Group{
-		ID:    groupID,
-		OrgID: "test-org",
-		Name:  "Old Name",
+		ID:         groupID,
+		CustomerID: "test-customer",
+		Name:       "Old Name",
 	}
 
-	store.On("Get", mock.Anything, "test-org", groupID).Return(existingGroup, nil).Once()
+	store.On("Get", mock.Anything, "test-customer", groupID).Return(existingGroup, nil).Once()
 	store.On("Put", mock.Anything, mock.MatchedBy(func(g domain.Group) bool {
 		return g.ID == groupID && g.Name == "New Name"
 	})).Return(nil).Once()
@@ -232,7 +232,7 @@ func TestGroupHandler_Patch_NotFound(t *testing.T) {
 
 	groupID := uuid.NewString()
 
-	store.On("Get", mock.Anything, "test-org", groupID).Return(domain.Group{}, storage.ErrNotFound).Once()
+	store.On("Get", mock.Anything, "test-customer", groupID).Return(domain.Group{}, storage.ErrNotFound).Once()
 
 	patch := map[string]interface{}{
 		"name": "New Name",
@@ -255,7 +255,7 @@ func TestGroupHandler_Delete(t *testing.T) {
 	groupID := uuid.NewString()
 
 	// Mock Delete to succeed
-	store.On("Delete", mock.Anything, "test-org", groupID).Return(nil).Once()
+	store.On("Delete", mock.Anything, "test-customer", groupID).Return(nil).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/"+groupID, nil)
 	resp, err := app.Test(req)
@@ -269,7 +269,7 @@ func TestGroupHandler_Delete(t *testing.T) {
 func TestGroupHandler_Delete_NotFound(t *testing.T) {
 	app, store := setupGroupTestApp()
 
-	store.On("Delete", mock.Anything, "test-org", "non-existent").Return(storage.ErrNotFound).Once()
+	store.On("Delete", mock.Anything, "test-customer", "non-existent").Return(storage.ErrNotFound).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/non-existent", nil)
 	resp, err := app.Test(req)
@@ -285,8 +285,8 @@ func TestGroupHandler_List(t *testing.T) {
 
 	expectedResult := domain.ListResult[domain.Group]{
 		Items: []domain.Group{
-			{ID: "group-1", OrgID: "test-org", Name: "Group 1"},
-			{ID: "group-2", OrgID: "test-org", Name: "Group 2"},
+			{ID: "group-1", CustomerID: "test-customer", Name: "Group 1"},
+			{ID: "group-2", CustomerID: "test-customer", Name: "Group 2"},
 		},
 		Pagination: domain.PaginationResult{
 			Page:       0,
@@ -319,8 +319,8 @@ func TestGroupHandler_List_WithSorting(t *testing.T) {
 
 	expectedResult := domain.ListResult[domain.Group]{
 		Items: []domain.Group{
-			{ID: "group-1", OrgID: "test-org", Name: "A Group"},
-			{ID: "group-2", OrgID: "test-org", Name: "B Group"},
+			{ID: "group-1", CustomerID: "test-customer", Name: "A Group"},
+			{ID: "group-2", CustomerID: "test-customer", Name: "B Group"},
 		},
 		Pagination: domain.PaginationResult{
 			Page:       0,

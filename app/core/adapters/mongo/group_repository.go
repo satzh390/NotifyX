@@ -19,7 +19,7 @@ type GroupRepository struct {
 }
 
 func (repo *GroupRepository) Put(ctx context.Context, group domain.Group) error {
-	filter := bson.M{"orgId": group.OrgID, "groupId": group.ID}
+	filter := bson.M{"customerId": group.CustomerID, "groupId": group.ID}
 	updateMap, err := BuildUpdateMap(group)
 	if err != nil {
 		return err
@@ -29,9 +29,9 @@ func (repo *GroupRepository) Put(ctx context.Context, group domain.Group) error 
 	update := bson.M{
 		"$set": updateMap,
 		"$setOnInsert": bson.M{
-			"createdAt": time.Now(),
-			"orgId":     group.OrgID,
-			"groupId":   group.ID,
+			"createdAt":  time.Now(),
+			"customerId": group.CustomerID,
+			"groupId":    group.ID,
 		},
 	}
 	opts := options.Update().SetUpsert(true)
@@ -39,8 +39,8 @@ func (repo *GroupRepository) Put(ctx context.Context, group domain.Group) error 
 	return err
 }
 
-func (repo *GroupRepository) Get(ctx context.Context, orgID, groupID string) (domain.Group, error) {
-	filter := bson.M{"orgId": orgID, "groupId": groupID}
+func (repo *GroupRepository) Get(ctx context.Context, customerID, groupID string) (domain.Group, error) {
+	filter := bson.M{"customerId": customerID, "groupId": groupID}
 	var group domain.Group
 	err := repo.collection.FindOne(ctx, filter).Decode(&group)
 	if errors.Is(err, mongoDriver.ErrNoDocuments) {
@@ -51,7 +51,7 @@ func (repo *GroupRepository) Get(ctx context.Context, orgID, groupID string) (do
 }
 
 func (repo *GroupRepository) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Group], error) {
-	filter := BuildBsonFilter(opts)
+	filter := buildGroupFilter(opts)
 	page, pageSize := PageOrDefaultParam(opts)
 	totalCount, err := repo.collection.CountDocuments(ctx, filter)
 	if err != nil {
@@ -87,8 +87,8 @@ func (repo *GroupRepository) List(ctx context.Context, opts domain.ListOptions) 
 	}, nil
 }
 
-func (repo *GroupRepository) Delete(ctx context.Context, orgID, groupID string) error {
-	filter := bson.M{"orgId": orgID, "groupId": groupID}
+func (repo *GroupRepository) Delete(ctx context.Context, customerID, groupID string) error {
+	filter := bson.M{"customerId": customerID, "groupId": groupID}
 	result, err := repo.collection.DeleteOne(ctx, filter)
 	if err != nil {
 		return err
@@ -101,3 +101,13 @@ func (repo *GroupRepository) Delete(ctx context.Context, orgID, groupID string) 
 	return nil
 }
 
+func buildGroupFilter(opts domain.ListOptions) bson.M {
+	filter := BuildBsonFilter(opts)
+	if eventType := opts.Filter["subscribedEventTypes"]; eventType != "" {
+		values := ParseCommaSeparatedString(eventType)
+		if len(values) > 0 {
+			filter["subscribedEventTypes"] = bson.M{"$in": values}
+		}
+	}
+	return filter
+}

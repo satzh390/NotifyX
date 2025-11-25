@@ -115,3 +115,29 @@ Once the API is running, access the interactive Swagger documentation at:
 ```
 http://localhost:8080/swagger/index.html
 ```
+
+### Updating Swagger Docs
+
+If you change the API annotations, regenerate the Swagger bundle so `docs/` stays in sync:
+
+**1. Install the CLI (one time)**
+```bash
+go install github.com/swaggo/swag/cmd/swag@v1.16.4
+```
+
+**2. Rebuild the docs from the API module**
+
+Windows (PowerShell):
+```powershell
+cd app\api
+$swag = Join-Path $env:USERPROFILE "go\bin\swag.exe"
+& $swag init -g cmd\main.go -o docs
+```
+
+Linux/Mac:
+```bash
+cd app/api
+$(go env GOPATH)/bin/swag init -g cmd/main.go -o docs
+```
+
+Commit the updated `docs/docs.go`, `docs/swagger.json`, and `docs/swagger.yaml` files with your change.

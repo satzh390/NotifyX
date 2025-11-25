@@ -47,8 +47,8 @@ func TestIntegration_Group_Create(t *testing.T) {
 	if created.Name != "Integration Test Group" {
 		t.Errorf("Expected name Integration Test Group, got %s", created.Name)
 	}
-	if created.OrgID != "test-org-integration" {
-		t.Errorf("Expected orgID test-org-integration, got %s", created.OrgID)
+	if created.CustomerID != "test-customer-integration" {
+		t.Errorf("Expected customerID test-customer-integration, got %s", created.CustomerID)
 	}
 }
 
@@ -66,7 +66,7 @@ func TestIntegration_Group_Get(t *testing.T) {
 	groupID := uuid.NewString()
 	group := domain.Group{
 		ID:    groupID,
-		OrgID: "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Name:  "Test Group",
 	}
 	if err := stores.Groups.Put(ctx, group); err != nil {
@@ -123,7 +123,7 @@ func TestIntegration_Group_Update(t *testing.T) {
 	groupID := uuid.NewString()
 	group := domain.Group{
 		ID:    groupID,
-		OrgID: "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Name:  "Old Name",
 	}
 	if err := stores.Groups.Put(ctx, group); err != nil {
@@ -172,7 +172,7 @@ func TestIntegration_Group_Patch(t *testing.T) {
 	groupID := uuid.NewString()
 	group := domain.Group{
 		ID:          groupID,
-		OrgID:       "test-org-integration",
+		CustomerID:  "test-customer-integration",
 		Name:        "Old Name",
 		Description: "Old Description",
 	}
@@ -246,7 +246,7 @@ func TestIntegration_Group_Delete(t *testing.T) {
 	groupID := uuid.NewString()
 	group := domain.Group{
 		ID:    groupID,
-		OrgID: "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Name:  "Test Group",
 	}
 	if err := stores.Groups.Put(ctx, group); err != nil {
@@ -290,7 +290,7 @@ func TestIntegration_Group_List(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		group := domain.Group{
 			ID:    uuid.NewString(),
-			OrgID: "test-org-integration",
+			CustomerID: "test-customer-integration",
 			Name:  fmt.Sprintf("Group %d", i),
 		}
 		_ = stores.Groups.Put(ctx, group)
@@ -331,12 +331,12 @@ func TestIntegration_Group_List_WithSorting(t *testing.T) {
 	store := stores.Groups
 	store.Put(ctx, domain.Group{
 		ID:    uuid.NewString(),
-		OrgID: "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Name:  "B Group",
 	})
 	store.Put(ctx, domain.Group{
 		ID:    uuid.NewString(),
-		OrgID: "test-org-integration",
+		CustomerID: "test-customer-integration",
 		Name:  "A Group",
 	})
 

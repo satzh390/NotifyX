@@ -1,6 +1,6 @@
 // @title NotifyX API
 // @version 1.0
-// @description API for templates, groups, subscribers, and rules
+// @description API for organizations, customers, templates, groups, subscribers, and rules
 // @BasePath /api/v1
 // @securityDefinitions.apikey BearerAuth
 // @in header

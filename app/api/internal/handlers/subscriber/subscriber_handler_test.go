@@ -24,7 +24,7 @@ func setupSubscriberTestApp() (*fiber.App, *MockSubscriberStore) {
 
 	api := app.Group("/api/v1")
 	api.Use(func(c *fiber.Ctx) error {
-		c.Locals("orgId", "test-org")
+		c.Locals("customerId", "test-customer")
 		return c.Next()
 	})
 
@@ -43,14 +43,14 @@ func TestSubscriberHandler_Create(t *testing.T) {
 	app, store := setupSubscriberTestApp()
 
 	store.On("Put", mock.Anything, mock.MatchedBy(func(s domain.Subscriber) bool {
-		return s.Email == "test@example.com" && s.OrgID == "test-org"
+		return s.Email == "test@example.com" && s.CustomerID == "test-customer"
 	})).Return(nil).Once()
 
 	// Mock Get to return the created subscriber (handler calls Get after Put)
-	store.On("Get", mock.Anything, "test-org", mock.AnythingOfType("string")).Return(func(ctx context.Context, orgID string, id string) domain.Subscriber {
+	store.On("Get", mock.Anything, "test-customer", mock.AnythingOfType("string")).Return(func(ctx context.Context, orgID string, id string) domain.Subscriber {
 		return domain.Subscriber{
 			ID:    id,
-			OrgID: "test-org",
+			CustomerID: "test-customer",
 			Email: "test@example.com",
 		}
 	}, nil).Once()
@@ -75,7 +75,7 @@ func TestSubscriberHandler_Create(t *testing.T) {
 	err = json.NewDecoder(resp.Body).Decode(&subscriber)
 	assert.NoError(t, err)
 	assert.Equal(t, "test@example.com", subscriber.Email)
-	assert.Equal(t, "test-org", subscriber.OrgID)
+	assert.Equal(t, "test-customer", subscriber.CustomerID)
 
 	store.AssertExpectations(t)
 }
@@ -121,11 +121,11 @@ func TestSubscriberHandler_Get(t *testing.T) {
 	subID := uuid.NewString()
 	expectedSubscriber := domain.Subscriber{
 		ID:    subID,
-		OrgID: "test-org",
+		CustomerID: "test-customer",
 		Email: "test@example.com",
 	}
 
-	store.On("Get", mock.Anything, "test-org", subID).Return(expectedSubscriber, nil).Once()
+	store.On("Get", mock.Anything, "test-customer", subID).Return(expectedSubscriber, nil).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/subscribers/"+subID, nil)
 	resp, err := app.Test(req)
@@ -145,7 +145,7 @@ func TestSubscriberHandler_Get(t *testing.T) {
 func TestSubscriberHandler_Get_NotFound(t *testing.T) {
 	app, store := setupSubscriberTestApp()
 
-	store.On("Get", mock.Anything, "test-org", "non-existent").Return(domain.Subscriber{}, storage.ErrNotFound).Once()
+	store.On("Get", mock.Anything, "test-customer", "non-existent").Return(domain.Subscriber{}, storage.ErrNotFound).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/subscribers/non-existent", nil)
 	resp, err := app.Test(req)
@@ -161,22 +161,22 @@ func TestSubscriberHandler_Put(t *testing.T) {
 
 	subID := uuid.NewString()
 	existingSubscriber := domain.Subscriber{
-		ID:        subID,
-		OrgID:     "test-org",
-		Email:     "old@example.com",
-		CreatedAt: time.Now(),
+		ID:         subID,
+		CustomerID: "test-customer",
+		Email:      "old@example.com",
+		CreatedAt:  time.Now(),
 	}
 
 	// Test PUT with existing subscriber (update)
-	store.On("Get", mock.Anything, "test-org", subID).Return(existingSubscriber, nil).Once()
+	store.On("Get", mock.Anything, "test-customer", subID).Return(existingSubscriber, nil).Once()
 	store.On("Put", mock.Anything, mock.MatchedBy(func(s domain.Subscriber) bool {
 		return s.ID == subID && s.Email == "new@example.com"
 	})).Return(nil).Once()
-	store.On("Get", mock.Anything, "test-org", subID).Return(domain.Subscriber{
-		ID:        subID,
-		OrgID:     "test-org",
-		Email:     "new@example.com",
-		CreatedAt: existingSubscriber.CreatedAt,
+	store.On("Get", mock.Anything, "test-customer", subID).Return(domain.Subscriber{
+		ID:         subID,
+		CustomerID: "test-customer",
+		Email:      "new@example.com",
+		CreatedAt:  existingSubscriber.CreatedAt,
 	}, nil).Once()
 
 	fullBody := map[string]interface{}{
@@ -210,14 +210,14 @@ func TestSubscriberHandler_Put_Create(t *testing.T) {
 	subID := uuid.NewString()
 
 	// Test PUT with non-existing subscriber (create)
-	store.On("Get", mock.Anything, "test-org", subID).Return(domain.Subscriber{}, storage.ErrNotFound).Once()
+	store.On("Get", mock.Anything, "test-customer", subID).Return(domain.Subscriber{}, storage.ErrNotFound).Once()
 	store.On("Put", mock.Anything, mock.MatchedBy(func(s domain.Subscriber) bool {
 		return s.ID == subID && s.Email == "new@example.com"
 	})).Return(nil).Once()
-	store.On("Get", mock.Anything, "test-org", subID).Return(domain.Subscriber{
-		ID:    subID,
-		OrgID: "test-org",
-		Email: "new@example.com",
+	store.On("Get", mock.Anything, "test-customer", subID).Return(domain.Subscriber{
+		ID:         subID,
+		CustomerID: "test-customer",
+		Email:      "new@example.com",
 	}, nil).Once()
 
 	fullBody := map[string]interface{}{
@@ -246,11 +246,11 @@ func TestSubscriberHandler_Patch(t *testing.T) {
 	subID := uuid.NewString()
 	existingSubscriber := domain.Subscriber{
 		ID:    subID,
-		OrgID: "test-org",
+		CustomerID: "test-customer",
 		Email: "old@example.com",
 	}
 
-	store.On("Get", mock.Anything, "test-org", subID).Return(existingSubscriber, nil).Once()
+	store.On("Get", mock.Anything, "test-customer", subID).Return(existingSubscriber, nil).Once()
 	store.On("Put", mock.Anything, mock.MatchedBy(func(s domain.Subscriber) bool {
 		return s.ID == subID && s.Email == "new@example.com"
 	})).Return(nil).Once()
@@ -280,7 +280,7 @@ func TestSubscriberHandler_Patch_NotFound(t *testing.T) {
 
 	subID := uuid.NewString()
 
-	store.On("Get", mock.Anything, "test-org", subID).Return(domain.Subscriber{}, storage.ErrNotFound).Once()
+	store.On("Get", mock.Anything, "test-customer", subID).Return(domain.Subscriber{}, storage.ErrNotFound).Once()
 
 	patch := map[string]interface{}{
 		"email": "new@example.com",
@@ -339,7 +339,7 @@ func TestSubscriberHandler_Delete(t *testing.T) {
 	subID := uuid.NewString()
 
 	// Mock Delete to succeed
-	store.On("Delete", mock.Anything, "test-org", subID).Return(nil).Once()
+	store.On("Delete", mock.Anything, "test-customer", subID).Return(nil).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/subscribers/"+subID, nil)
 	resp, err := app.Test(req)
@@ -353,7 +353,7 @@ func TestSubscriberHandler_Delete(t *testing.T) {
 func TestSubscriberHandler_Delete_NotFound(t *testing.T) {
 	app, store := setupSubscriberTestApp()
 
-	store.On("Delete", mock.Anything, "test-org", "non-existent").Return(storage.ErrNotFound).Once()
+	store.On("Delete", mock.Anything, "test-customer", "non-existent").Return(storage.ErrNotFound).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/subscribers/non-existent", nil)
 	resp, err := app.Test(req)
@@ -369,8 +369,8 @@ func TestSubscriberHandler_List(t *testing.T) {
 
 	expectedResult := domain.ListResult[domain.Subscriber]{
 		Items: []domain.Subscriber{
-			{ID: "sub-1", OrgID: "test-org", Email: "test1@example.com", CreatedAt: time.Now()},
-			{ID: "sub-2", OrgID: "test-org", Email: "test2@example.com", CreatedAt: time.Now()},
+			{ID: "sub-1", CustomerID: "test-customer", Email: "test1@example.com", CreatedAt: time.Now()},
+			{ID: "sub-2", CustomerID: "test-customer", Email: "test2@example.com", CreatedAt: time.Now()},
 		},
 		Pagination: domain.PaginationResult{
 			Page:       0,
@@ -404,7 +404,7 @@ func TestSubscriberHandler_List_WithGroupFilter(t *testing.T) {
 
 	expectedResult := domain.ListResult[domain.Subscriber]{
 		Items: []domain.Subscriber{
-			{ID: "sub-1", OrgID: "test-org", Groups: []string{"group-123"}},
+			{ID: "sub-1", CustomerID: "test-customer", Groups: []string{"group-123"}},
 		},
 		Pagination: domain.PaginationResult{
 			Page:       0,
@@ -430,7 +430,7 @@ func TestSubscriberHandler_List_WithSorting(t *testing.T) {
 
 	expectedResult := domain.ListResult[domain.Subscriber]{
 		Items: []domain.Subscriber{
-			{ID: "sub-1", OrgID: "test-org", CreatedAt: time.Now()},
+			{ID: "sub-1", CustomerID: "test-customer", CreatedAt: time.Now()},
 		},
 		Pagination: domain.PaginationResult{
 			Page:       0,
@@ -456,7 +456,7 @@ func TestSubscriberHandler_List_DefaultPagination(t *testing.T) {
 
 	expectedResult := domain.ListResult[domain.Subscriber]{
 		Items: []domain.Subscriber{
-			{ID: "sub-1", OrgID: "test-org", Email: "test1@example.com", CreatedAt: time.Now()},
+			{ID: "sub-1", CustomerID: "test-customer", Email: "test1@example.com", CreatedAt: time.Now()},
 		},
 		Pagination: domain.PaginationResult{
 			Page:       0,

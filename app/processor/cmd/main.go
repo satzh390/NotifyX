@@ -14,6 +14,7 @@ import (
 
 	mongoStore "github.com/notifyx/core/adapters/mongo"
 	"github.com/notifyx/core/domain"
+	"github.com/notifyx/core/resolver"
 	"github.com/notifyx/processor/config"
 	"github.com/notifyx/processor/internal/cache"
 	"github.com/notifyx/processor/internal/fanout"
@@ -51,6 +52,7 @@ func main() {
 	}()
 
 	subCache := cache.SubscriberCache(cache.NoopSubscriberCache{})
+	ruleCache := resolver.RuleCache(resolver.NoopRuleCache{})
 	var redisClient *redis.Client
 
 	if cfg.Cache.Redis.Enabled {
@@ -60,14 +62,19 @@ func main() {
 			Password: cfg.Cache.Redis.Pass,
 		})
 		if err := redisClient.Ping(ctx).Err(); err != nil {
-			logger.Warn("redis disabled due to ping error", slog.String("error", err.Error()))
+			logger.Warn("redis cache disabled due to ping error, falling back to direct DB lookups", slog.String("error", err.Error()))
 		} else {
 			subCache = cache.NewRedisSubscriberCache(redisClient, cfg.Cache.Redis.TTL)
-			logger.Info("redis subscriber cache enabled")
+			ruleCache = resolver.NewRedisRuleCache(redisClient, cfg.Cache.Redis.TTL)
+			logger.Info("redis cache enabled for subscribers and rules")
 		}
 		defer func() {
-			_ = redisClient.Close()
+			if redisClient != nil {
+				_ = redisClient.Close()
+			}
 		}()
+	} else {
+		logger.Info("redis cache disabled; rule resolver will fetch directly from storage")
 	}
 
 	reader := kafka.NewReader(cfg.ReaderConfig())
@@ -92,14 +99,20 @@ func main() {
 		_ = publisher.Close(timeout)
 	}()
 
+	ruleResolver := resolver.NewRuleResolver(resolver.Options{
+		Store: stores.Rules,
+		Cache: ruleCache,
+	})
+
 	proc := pipeline.NewProcessor(pipeline.Options{
-		Reader:   reader,
-		DLQ:      dlqWriter,
-		Resolver: recipients.NewResolver(stores, subCache),
-		Filter:   filter.NewPreferencesFilter(),
-		Fanout:   publisher,
-		Stores:   stores,
-		Logger:   logger,
+		Reader:       reader,
+		DLQ:          dlqWriter,
+		Resolver:     recipients.NewResolver(stores, subCache),
+		RuleResolver: ruleResolver,
+		Filter:       filter.NewPreferencesFilter(),
+		Fanout:       publisher,
+		Stores:       stores,
+		Logger:       logger,
 	})
 
 	logger.Info("processor started",

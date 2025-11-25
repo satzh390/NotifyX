@@ -1,0 +1,31 @@
+kafka:
+  brokers:
+    - "localhost:9092"
+  groupId: "notifyx-processor"
+  inputTopic: "notifyx-events"
+  dlqTopic: "notifyx-events-dlq"
+  minBytes: 10000
+  maxBytes: 1000000
+  maxWait: "1s"
+  commitInterval: "5s"
+
+storage:
+  mongo:
+    uri: "mongodb://localhost:27017"
+    database: "notifyx"
+    collectionPrefix: ""
+
+worker:
+  topics:
+    email: "notifyx-worker-email"
+    sms: "notifyx-worker-sms"
+    push: "notifyx-worker-push"
+
+cache:
+  redis:
+    enabled: true
+    addr: "localhost:6379"
+    db: 0
+    pass: ""
+    ttl: "5m"
+

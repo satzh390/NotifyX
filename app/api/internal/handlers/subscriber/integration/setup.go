@@ -27,9 +27,9 @@ func setupIntegrationTest(t *testing.T) (storage.Stores, *fiber.App, func()) {
 	app := fiber.New()
 	api := app.Group("/api/v1")
 
-	// Mock middleware that sets orgID
+	// Mock middleware that sets customerID
 	api.Use(func(c *fiber.Ctx) error {
-		c.Locals("orgId", "test-org-integration")
+		c.Locals("customerId", "test-customer-integration")
 		return c.Next()
 	})
 
