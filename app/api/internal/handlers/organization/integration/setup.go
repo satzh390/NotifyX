@@ -10,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/notifyx/api/internal/handlers/organization"
 	mongoadapter "github.com/notifyx/core/adapters/mongo"
-	"github.com/notifyx/core/storage"
 )
 
 func setupOrganizationIntegrationApp(t *testing.T) (*fiber.App, func()) {

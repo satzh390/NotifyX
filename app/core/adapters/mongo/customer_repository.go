@@ -26,12 +26,17 @@ func (repo *CustomerRepository) Put(ctx context.Context, customer domain.Custome
 	}
 
 	updateMap["updatedAt"] = time.Now()
+	setOnInsert := bson.M{
+		"createdAt": time.Now(),
+		"id":        customer.ID,
+	}
+	// Include immutable fields in $setOnInsert (they should only be set on insert, not update)
+	if customer.OrgID != "" {
+		setOnInsert["orgId"] = customer.OrgID
+	}
 	update := bson.M{
-		"$set": updateMap,
-		"$setOnInsert": bson.M{
-			"createdAt": time.Now(),
-			"id":        customer.ID,
-		},
+		"$set":         updateMap,
+		"$setOnInsert": setOnInsert,
 	}
 	opts := options.Update().SetUpsert(true)
 	_, err = repo.collection.UpdateOne(ctx, filter, update, opts)
