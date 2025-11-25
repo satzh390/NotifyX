@@ -5,7 +5,7 @@
 ### Prerequisites
 Ensure MongoDB is running for integration tests:
 ```powershell
-docker compose -f docker-compose.yaml up -d
+docker compose -f docker-compose.local.yaml up -d
 ```
 
 ### Run All Tests (Unit + Integration)
@@ -13,19 +13,25 @@ docker compose -f docker-compose.yaml up -d
 **Windows (PowerShell) - From project root:**
 ```powershell
 # Start MongoDB if not running
-docker compose -f docker-compose.yaml up -d
+docker compose -f docker-compose.local.yaml up -d
 
 # Run all tests
-cd app\api; go test -tags=integration ./... -v; cd ..\core; go test -tags=integration ./... -v; cd ..\httpx; go test ./... -v
+cd app\api; go test -tags=integration ./... -v;
+cd ..\core; go test -tags=integration ./... -v;
+cd ..\httpx; go test ./... -v;
+cd ..\processor; go test ./... -v
 ```
 
 **Linux/Mac - From project root:**
 ```bash
 # Start MongoDB if not running
-docker compose -f docker-compose.yaml up -d
+docker compose -f docker-compose.local.yaml up -d
 
 # Run all tests
-cd app/api && go test -tags=integration ./... -v && cd ../core && go test -tags=integration ./... -v && cd ../httpx && go test ./... -v
+cd app/api && go test -tags=integration ./... -v \
+  && cd ../core && go test -tags=integration ./... -v \
+  && cd ../httpx && go test ./... -v \
+  && cd ../processor && go test ./... -v
 ```
 
 ### Run Unit Tests Only
@@ -43,6 +49,10 @@ go test ./... -v
 # HTTPX unit tests
 cd ..\httpx
 go test ./... -v
+
+# Processor unit tests
+cd ..\processor
+go test ./... -v
 ```
 
 **Linux/Mac:**
@@ -58,6 +68,10 @@ go test ./... -v
 # HTTPX unit tests
 cd ../httpx
 go test ./... -v
+
+# Processor unit tests
+cd ../processor
+go test ./... -v
 ```
 
 ### Run Integration Tests Only
@@ -65,7 +79,7 @@ go test ./... -v
 **Windows (PowerShell):**
 ```powershell
 # Ensure MongoDB is running first!
-docker compose -f docker-compose.yaml up -d
+docker compose -f docker-compose.local.yaml up -d
 
 # API integration tests
 cd app\api
@@ -74,12 +88,14 @@ go test -tags=integration ./... -v
 # Core integration tests
 cd ..\core
 go test -tags=integration ./... -v
+
+# Processor currently has unit tests only; run `go test ./... -v` if needed.
 ```
 
 **Linux/Mac:**
 ```bash
 # Ensure MongoDB is running first!
-docker compose -f docker-compose.yaml up -d
+docker compose -f docker-compose.local.yaml up -d
 
 # API integration tests
 cd app/api
@@ -88,6 +104,8 @@ go test -tags=integration ./... -v
 # Core integration tests
 cd ../core
 go test -tags=integration ./... -v
+
+# Processor currently has unit tests only; run `go test ./... -v` if needed.
 ```
 
 ### Run Specific Test Package

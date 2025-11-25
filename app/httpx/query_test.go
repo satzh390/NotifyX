@@ -28,7 +28,7 @@ func TestParseListOptions_DefaultPagination(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 0, opts.Pagination.Page, "Default page should be 0")
 	assert.Equal(t, 20, opts.Pagination.PageSize, "Default pageSize should be 20")
-	assert.Equal(t, "test-org", opts.Filter["orgId"])
+	assert.Equal(t, "test-org", opts.Filter["customerId"])
 }
 
 func TestParseListOptions_CustomPagination(t *testing.T) {
@@ -168,3 +168,19 @@ func TestParseListOptions_ZeroBasedPagination(t *testing.T) {
 	assert.Equal(t, 10, opts.Pagination.PageSize)
 }
 
+func TestEventTypeFilterFromQuery(t *testing.T) {
+	app := fiber.New()
+	app.Get("/test", func(c *fiber.Ctx) error {
+		filter := EventTypeFilterFromQuery(c)
+		return c.JSON(map[string]string{"eventType": filter})
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test?eventType=%20order.created%20", nil)
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+
+	var body map[string]string
+	err = json.NewDecoder(resp.Body).Decode(&body)
+	assert.NoError(t, err)
+	assert.Equal(t, "order.created", body["eventType"])
+}

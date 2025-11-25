@@ -106,3 +106,14 @@ func PageOrDefaultParam(opts domain.ListOptions) (page int, pageSize int) {
 	pageSize = min(100, pageSize)
 	return
 }
+
+func ParseCommaSeparatedString(raw string) []string {
+	rawValues := strings.Split(raw, ",")
+	values := make([]string, 0, len(rawValues))
+	for _, item := range rawValues {
+		if trimmed := strings.TrimSpace(item); trimmed != "" {
+			values = append(values, trimmed)
+		}
+	}
+	return values
+}

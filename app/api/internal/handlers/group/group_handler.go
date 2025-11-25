@@ -28,6 +28,8 @@ type GroupRequest struct {
 	Description string `json:"description"`
 	// Subscribers - list of subscriber IDs in this group
 	Subscribers []string `json:"subscribers"`
+	// SubscribedEventTypes - list of event types this group opted into
+	SubscribedEventTypes []string `json:"subscribedEventTypes"`
 	// Metadata - optional key-value pairs for additional data
 	Metadata map[string]string `json:"metadata"`
 }
@@ -40,6 +42,8 @@ type GroupPatchRequest struct {
 	Description string `json:"description"`
 	// Subscribers - list of subscriber IDs in this group
 	Subscribers []string `json:"subscribers"`
+	// SubscribedEventTypes - list of event types this group opted into
+	SubscribedEventTypes []string `json:"subscribedEventTypes"`
 	// Metadata - optional key-value pairs for additional data
 	Metadata map[string]string `json:"metadata"`
 }
@@ -68,12 +72,13 @@ func (handler *GroupHandler) Create(fiberCtx *fiber.Ctx) error {
 	}
 
 	group := domain.Group{
-		ID:          groupID,
-		CustomerID:  customerID,
-		Name:        body.Name,
-		Description: body.Description,
-		Subscribers: body.Subscribers,
-		Metadata:    body.Metadata,
+		ID:                   groupID,
+		CustomerID:           customerID,
+		Name:                 body.Name,
+		Description:          body.Description,
+		Subscribers:          body.Subscribers,
+		SubscribedEventTypes: body.SubscribedEventTypes,
+		Metadata:             body.Metadata,
 	}
 
 	if err := handler.store.Put(context.Background(), group); err != nil {
@@ -153,12 +158,13 @@ func (handler *GroupHandler) Put(fiberCtx *fiber.Ctx) error {
 	exists := err == nil
 
 	group := domain.Group{
-		ID:          groupID,
-		CustomerID:  customerID,
-		Name:        body.Name,
-		Description: body.Description,
-		Subscribers: body.Subscribers,
-		Metadata:    body.Metadata,
+		ID:                   groupID,
+		CustomerID:           customerID,
+		Name:                 body.Name,
+		Description:          body.Description,
+		Subscribers:          body.Subscribers,
+		SubscribedEventTypes: body.SubscribedEventTypes,
+		Metadata:             body.Metadata,
 	}
 
 	if err := handler.store.Put(context.Background(), group); err != nil {
@@ -264,6 +270,9 @@ func (handler *GroupHandler) Delete(fiberCtx *fiber.Ctx) error {
 func (handler *GroupHandler) List(fiberCtx *fiber.Ctx) error {
 	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	opts := httpx.ParseListOptions(fiberCtx, customerID)
+	if eventType := httpx.EventTypeFilterFromQuery(fiberCtx); eventType != "" {
+		opts.Filter["subscribedEventTypes"] = eventType
+	}
 
 	result, err := handler.store.List(context.Background(), opts)
 	if err != nil {

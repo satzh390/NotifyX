@@ -82,3 +82,8 @@ func parseSortBy(sortByStr string) []domain.SortParams {
 
 	return sortOptions
 }
+
+// EventTypeFilterFromQuery extracts the optional eventType filter parameter.
+func EventTypeFilterFromQuery(parser *fiber.Ctx) string {
+	return strings.TrimSpace(parser.Query("eventType"))
+}

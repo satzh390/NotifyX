@@ -135,7 +135,7 @@ func TestTemplateHandler_Get(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	store.On("Get", mock.Anything, "test-org", templateID).Return(expectedTemplate, nil).Once()
+	store.On("Get", mock.Anything, "test-customer", templateID).Return(expectedTemplate, nil).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/templates/"+templateID, nil)
 	resp, err := app.Test(req)
@@ -155,7 +155,7 @@ func TestTemplateHandler_Get(t *testing.T) {
 func TestTemplateHandler_Get_NotFound(t *testing.T) {
 	app, store := setupTemplateTestApp()
 
-	store.On("Get", mock.Anything, "test-org", "non-existent").Return(domain.Template{}, storage.ErrNotFound).Once()
+	store.On("Get", mock.Anything, "test-customer", "non-existent").Return(domain.Template{}, storage.ErrNotFound).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/templates/non-existent", nil)
 	resp, err := app.Test(req)
@@ -183,11 +183,11 @@ func TestTemplateHandler_Put(t *testing.T) {
 	}
 
 	// Test PUT with existing template (update)
-	store.On("Get", mock.Anything, "test-org", templateID).Return(existingTemplate, nil).Once()
+	store.On("Get", mock.Anything, "test-customer", templateID).Return(existingTemplate, nil).Once()
 	store.On("Put", mock.Anything, mock.MatchedBy(func(tpl domain.Template) bool {
 		return tpl.ID == templateID && tpl.Name == "New Name"
 	})).Return(nil).Once()
-	store.On("Get", mock.Anything, "test-org", templateID).Return(domain.Template{
+	store.On("Get", mock.Anything, "test-customer", templateID).Return(domain.Template{
 		ID:      templateID,
 		CustomerID: "test-customer",
 		Name:    "New Name",
@@ -230,11 +230,11 @@ func TestTemplateHandler_Put_Create(t *testing.T) {
 	templateID := uuid.NewString()
 
 	// Test PUT with non-existing template (create)
-	store.On("Get", mock.Anything, "test-org", templateID).Return(domain.Template{}, storage.ErrNotFound).Once()
+	store.On("Get", mock.Anything, "test-customer", templateID).Return(domain.Template{}, storage.ErrNotFound).Once()
 	store.On("Put", mock.Anything, mock.MatchedBy(func(tpl domain.Template) bool {
 		return tpl.ID == templateID && tpl.Name == "New Template"
 	})).Return(nil).Once()
-	store.On("Get", mock.Anything, "test-org", templateID).Return(domain.Template{
+	store.On("Get", mock.Anything, "test-customer", templateID).Return(domain.Template{
 		ID:      templateID,
 		CustomerID: "test-customer",
 		Name:    "New Template",
@@ -282,7 +282,7 @@ func TestTemplateHandler_Patch(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	store.On("Get", mock.Anything, "test-org", templateID).Return(existingTemplate, nil).Once()
+	store.On("Get", mock.Anything, "test-customer", templateID).Return(existingTemplate, nil).Once()
 	store.On("Put", mock.Anything, mock.MatchedBy(func(tpl domain.Template) bool {
 		return tpl.ID == templateID && tpl.Name == "New Name"
 	})).Return(nil).Once()
@@ -315,7 +315,7 @@ func TestTemplateHandler_Patch_NotFound(t *testing.T) {
 
 	templateID := uuid.NewString()
 
-	store.On("Get", mock.Anything, "test-org", templateID).Return(domain.Template{}, storage.ErrNotFound).Once()
+	store.On("Get", mock.Anything, "test-customer", templateID).Return(domain.Template{}, storage.ErrNotFound).Once()
 
 	patch := map[string]interface{}{
 		"name": "New Name",
@@ -337,7 +337,7 @@ func TestTemplateHandler_Delete(t *testing.T) {
 
 	templateID := uuid.NewString()
 
-	store.On("Delete", mock.Anything, "test-org", templateID).Return(nil).Once()
+	store.On("Delete", mock.Anything, "test-customer", templateID).Return(nil).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/templates/"+templateID, nil)
 	resp, err := app.Test(req)

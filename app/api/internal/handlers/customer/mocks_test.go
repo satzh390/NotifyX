@@ -12,23 +12,23 @@ type MockCustomerStore struct {
 	mock.Mock
 }
 
-func (m *MockCustomerStore) Put(ctx context.Context, customer domain.Customer) error {
-	args := m.Called(ctx, customer)
+func (mockStore *MockCustomerStore) Put(ctx context.Context, customer domain.Customer) error {
+	args := mockStore.Called(ctx, customer)
 	return args.Error(0)
 }
 
-func (m *MockCustomerStore) Get(ctx context.Context, customerID string) (domain.Customer, error) {
-	args := m.Called(ctx, customerID)
+func (mockStore *MockCustomerStore) Get(ctx context.Context, customerID string) (domain.Customer, error) {
+	args := mockStore.Called(ctx, customerID)
 	return args.Get(0).(domain.Customer), args.Error(1)
 }
 
-func (m *MockCustomerStore) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Customer], error) {
-	args := m.Called(ctx, opts)
+func (mockStore *MockCustomerStore) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Customer], error) {
+	args := mockStore.Called(ctx, opts)
 	return args.Get(0).(domain.ListResult[domain.Customer]), args.Error(1)
 }
 
-func (m *MockCustomerStore) Delete(ctx context.Context, customerID string) error {
-	args := m.Called(ctx, customerID)
+func (mockStore *MockCustomerStore) Delete(ctx context.Context, customerID string) error {
+	args := mockStore.Called(ctx, customerID)
 	return args.Error(0)
 }
 

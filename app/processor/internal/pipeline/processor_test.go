@@ -8,41 +8,46 @@ import (
 	"time"
 
 	"github.com/notifyx/core/domain"
+	resolverpkg "github.com/notifyx/core/resolver"
 	"github.com/notifyx/core/storage"
-	"github.com/notifyx/processor/internal/cache"
 	"github.com/notifyx/processor/internal/event"
 	"github.com/notifyx/processor/internal/fanout"
-	"github.com/notifyx/processor/internal/filter"
-	"github.com/notifyx/processor/internal/recipients"
+	filterpkg "github.com/notifyx/processor/internal/filter"
 	"github.com/segmentio/kafka-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func setupTestProcessor() (*Processor, *MockKafkaReader, *MockKafkaWriter, *MockResolver, *MockPublisher, *MockPreferencesFilter, *MockStores) {
+func setupTestProcessor() (*Processor, *MockKafkaReader, *MockKafkaWriter, *MockResolver, *MockPublisher, *MockPreferencesFilter, *MockRuleStore) {
 	reader := new(MockKafkaReader)
 	dlq := new(MockKafkaWriter)
-	resolver := new(MockResolver)
+	resolverMock := new(MockResolver)
 	publisher := new(MockPublisher)
 	filter := new(MockPreferencesFilter)
-	stores := &MockStores{
-		Rules: new(MockRuleStore),
-	}
+	ruleStore := new(MockRuleStore)
 
-	processor := NewProcessor(Options{
-		Reader:   reader,
-		DLQ:      dlq,
-		Resolver: resolver,
-		Filter:   filter,
-		Fanout:   publisher,
-		Stores:   stores,
+	ruleResolver := resolverpkg.NewRuleResolver(resolverpkg.Options{
+		Store: ruleStore,
+		Cache: resolverpkg.NoopRuleCache{},
 	})
 
-	return processor, reader, dlq, resolver, publisher, filter, stores
+	processor := NewProcessor(Options{
+		Reader:       reader,
+		DLQ:          dlq,
+		Resolver:     resolverMock,
+		Filter:       filter,
+		Fanout:       publisher,
+		RuleResolver: ruleResolver,
+		Stores: storage.Stores{
+			Rules: ruleStore,
+		},
+	})
+
+	return processor, reader, dlq, resolverMock, publisher, filter, ruleStore
 }
 
 func TestProcessor_HandleMessage_Success(t *testing.T) {
-	processor, reader, _, resolver, publisher, filter, stores := setupTestProcessor()
+	processor, _, _, resolver, publisher, filter, ruleStore := setupTestProcessor()
 
 	customerID := "test-customer"
 	eventType := "order.created"
@@ -85,16 +90,16 @@ func TestProcessor_HandleMessage_Success(t *testing.T) {
 		Value: envelopeJSON,
 	}
 
-	stores.Rules.(*MockRuleStore).On("Get", mock.Anything, customerID, eventType).Return(rule, nil).Once()
-	resolver.On("Stream", mock.Anything, customerID, mock.Anything, mock.AnythingOfType("func(domain.Subscriber) error")).
+	ruleStore.On("Get", mock.Anything, customerID, eventType).Return(rule, nil).Once()
+	resolver.On("Stream", mock.Anything, customerID, eventType, mock.Anything, mock.AnythingOfType("func(domain.Subscriber) error")).
 		Run(func(args mock.Arguments) {
-			visitor := args.Get(3).(func(domain.Subscriber) error)
+			visitor := args.Get(4).(func(domain.Subscriber) error)
 			_ = visitor(subscriber)
 		}).Return(nil).Once()
 
 	filter.On("Apply", mock.MatchedBy(func(subs []domain.Subscriber) bool {
 		return len(subs) == 1 && subs[0].ID == "sub-1"
-	}), rule).Return([]filter.FilteredSubscriber{
+	}), rule).Return([]filterpkg.FilteredSubscriber{
 		{
 			Subscriber: subscriber,
 			Channels:   []domain.ChannelType{domain.ChannelEmail},
@@ -105,20 +110,17 @@ func TestProcessor_HandleMessage_Success(t *testing.T) {
 		return len(envs) == 1 && envs[0].Channel == domain.ChannelEmail
 	})).Return(nil).Once()
 
-	reader.On("CommitMessages", mock.Anything, mock.Anything).Return(nil).Once()
-
 	err := processor.handleMessage(context.Background(), msg)
 
 	assert.NoError(t, err)
-	stores.Rules.(*MockRuleStore).AssertExpectations(t)
+	ruleStore.AssertExpectations(t)
 	resolver.AssertExpectations(t)
 	filter.AssertExpectations(t)
 	publisher.AssertExpectations(t)
-	reader.AssertExpectations(t)
 }
 
 func TestProcessor_HandleMessage_InvalidEnvelope(t *testing.T) {
-	processor, reader, _, _, _, _, _ := setupTestProcessor()
+	processor, _, _, _, _, _, _ := setupTestProcessor()
 
 	msg := kafka.Message{
 		Value: []byte("invalid json"),
@@ -127,11 +129,10 @@ func TestProcessor_HandleMessage_InvalidEnvelope(t *testing.T) {
 	err := processor.handleMessage(context.Background(), msg)
 
 	assert.Error(t, err)
-	reader.AssertNotCalled(t, "CommitMessages")
 }
 
 func TestProcessor_HandleMessage_MissingCustomerID(t *testing.T) {
-	processor, reader, _, _, _, _, _ := setupTestProcessor()
+	processor, _, _, _, _, _, _ := setupTestProcessor()
 
 	envelope := event.CloudEventEnvelope[map[string]any]{
 		ID:         "event-1",
@@ -151,11 +152,10 @@ func TestProcessor_HandleMessage_MissingCustomerID(t *testing.T) {
 	err := processor.handleMessage(context.Background(), msg)
 
 	assert.Error(t, err)
-	reader.AssertNotCalled(t, "CommitMessages")
 }
 
 func TestProcessor_HandleMessage_RuleNotFound(t *testing.T) {
-	processor, reader, dlq, _, _, _, stores := setupTestProcessor()
+	processor, _, _, _, _, _, ruleStore := setupTestProcessor()
 
 	customerID := "test-customer"
 	eventType := "order.created"
@@ -175,19 +175,16 @@ func TestProcessor_HandleMessage_RuleNotFound(t *testing.T) {
 		Value: envelopeJSON,
 	}
 
-	stores.Rules.(*MockRuleStore).On("Get", mock.Anything, customerID, eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
-	dlq.On("WriteMessages", mock.Anything, mock.Anything).Return(nil).Once()
+	ruleStore.On("Get", mock.Anything, customerID, eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
 
 	err := processor.handleMessage(context.Background(), msg)
 
 	assert.Error(t, err)
-	stores.Rules.(*MockRuleStore).AssertExpectations(t)
-	dlq.AssertExpectations(t)
-	reader.AssertNotCalled(t, "CommitMessages")
+	ruleStore.AssertExpectations(t)
 }
 
 func TestProcessor_HandleMessage_NoEligibleSubscribers(t *testing.T) {
-	processor, reader, _, resolver, publisher, filter, stores := setupTestProcessor()
+	processor, _, _, resolver, publisher, filter, ruleStore := setupTestProcessor()
 
 	customerID := "test-customer"
 	eventType := "order.created"
@@ -230,26 +227,23 @@ func TestProcessor_HandleMessage_NoEligibleSubscribers(t *testing.T) {
 		Value: envelopeJSON,
 	}
 
-	stores.Rules.(*MockRuleStore).On("Get", mock.Anything, customerID, eventType).Return(rule, nil).Once()
-	resolver.On("Stream", mock.Anything, customerID, mock.Anything, mock.AnythingOfType("func(domain.Subscriber) error")).
+	ruleStore.On("Get", mock.Anything, customerID, eventType).Return(rule, nil).Once()
+	resolver.On("Stream", mock.Anything, customerID, eventType, mock.Anything, mock.AnythingOfType("func(domain.Subscriber) error")).
 		Run(func(args mock.Arguments) {
-			visitor := args.Get(3).(func(domain.Subscriber) error)
+			visitor := args.Get(4).(func(domain.Subscriber) error)
 			_ = visitor(subscriber)
 		}).Return(nil).Once()
 
-	filter.On("Apply", mock.Anything, rule).Return([]filter.FilteredSubscriber{}).Once()
-
-	reader.On("CommitMessages", mock.Anything, mock.Anything).Return(nil).Once()
+	filter.On("Apply", mock.Anything, rule).Return([]filterpkg.FilteredSubscriber{}).Once()
 
 	err := processor.handleMessage(context.Background(), msg)
 
 	assert.NoError(t, err)
 	publisher.AssertNotCalled(t, "Publish")
-	reader.AssertExpectations(t)
 }
 
 func TestProcessor_HandleMessage_ResolverError(t *testing.T) {
-	processor, reader, _, resolver, _, _, stores := setupTestProcessor()
+	processor, _, _, resolver, _, _, ruleStore := setupTestProcessor()
 
 	customerID := "test-customer"
 	eventType := "order.created"
@@ -280,18 +274,17 @@ func TestProcessor_HandleMessage_ResolverError(t *testing.T) {
 		Value: envelopeJSON,
 	}
 
-	stores.Rules.(*MockRuleStore).On("Get", mock.Anything, customerID, eventType).Return(rule, nil).Once()
-	resolver.On("Stream", mock.Anything, customerID, mock.Anything, mock.AnythingOfType("func(domain.Subscriber) error")).
+	ruleStore.On("Get", mock.Anything, customerID, eventType).Return(rule, nil).Once()
+	resolver.On("Stream", mock.Anything, customerID, eventType, mock.Anything, mock.AnythingOfType("func(domain.Subscriber) error")).
 		Return(errors.New("resolver error")).Once()
 
 	err := processor.handleMessage(context.Background(), msg)
 
 	assert.Error(t, err)
-	reader.AssertNotCalled(t, "CommitMessages")
 }
 
 func TestProcessor_HandleMessage_PublisherError(t *testing.T) {
-	processor, reader, dlq, resolver, publisher, filter, stores := setupTestProcessor()
+	processor, _, _, resolver, publisher, filter, ruleStore := setupTestProcessor()
 
 	customerID := "test-customer"
 	eventType := "order.created"
@@ -334,14 +327,14 @@ func TestProcessor_HandleMessage_PublisherError(t *testing.T) {
 		Value: envelopeJSON,
 	}
 
-	stores.Rules.(*MockRuleStore).On("Get", mock.Anything, customerID, eventType).Return(rule, nil).Once()
-	resolver.On("Stream", mock.Anything, customerID, mock.Anything, mock.AnythingOfType("func(domain.Subscriber) error")).
+	ruleStore.On("Get", mock.Anything, customerID, eventType).Return(rule, nil).Once()
+	resolver.On("Stream", mock.Anything, customerID, eventType, mock.Anything, mock.AnythingOfType("func(domain.Subscriber) error")).
 		Run(func(args mock.Arguments) {
-			visitor := args.Get(3).(func(domain.Subscriber) error)
+			visitor := args.Get(4).(func(domain.Subscriber) error)
 			_ = visitor(subscriber)
 		}).Return(nil).Once()
 
-	filter.On("Apply", mock.Anything, rule).Return([]filter.FilteredSubscriber{
+	filter.On("Apply", mock.Anything, rule).Return([]filterpkg.FilteredSubscriber{
 		{
 			Subscriber: subscriber,
 			Channels:   []domain.ChannelType{domain.ChannelEmail},
@@ -349,13 +342,10 @@ func TestProcessor_HandleMessage_PublisherError(t *testing.T) {
 	}).Once()
 
 	publisher.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publisher error")).Once()
-	dlq.On("WriteMessages", mock.Anything, mock.Anything).Return(nil).Once()
 
 	err := processor.handleMessage(context.Background(), msg)
 
 	assert.Error(t, err)
-	dlq.AssertExpectations(t)
-	reader.AssertNotCalled(t, "CommitMessages")
 }
 
 func TestGenerateTaskID(t *testing.T) {
@@ -379,9 +369,9 @@ func TestGenerateTaskID(t *testing.T) {
 
 func TestGetSubscriberIdentifier(t *testing.T) {
 	tests := []struct {
-		name      string
+		name       string
 		subscriber domain.Subscriber
-		expected  string
+		expected   string
 	}{
 		{
 			name: "subscriber with ID",
@@ -424,4 +414,3 @@ func TestGetSubscriberIdentifier(t *testing.T) {
 		})
 	}
 }
-

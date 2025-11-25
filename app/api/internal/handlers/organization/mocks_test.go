@@ -12,22 +12,22 @@ type MockOrganizationStore struct {
 	mock.Mock
 }
 
-func (m *MockOrganizationStore) Put(ctx context.Context, org domain.Organization) error {
-	args := m.Called(ctx, org)
+func (mockStore *MockOrganizationStore) Put(ctx context.Context, org domain.Organization) error {
+	args := mockStore.Called(ctx, org)
 	return args.Error(0)
 }
 
-func (m *MockOrganizationStore) Get(ctx context.Context, orgID string) (domain.Organization, error) {
-	args := m.Called(ctx, orgID)
+func (mockStore *MockOrganizationStore) Get(ctx context.Context, orgID string) (domain.Organization, error) {
+	args := mockStore.Called(ctx, orgID)
 	return args.Get(0).(domain.Organization), args.Error(1)
 }
 
-func (m *MockOrganizationStore) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Organization], error) {
-	args := m.Called(ctx, opts)
+func (mockStore *MockOrganizationStore) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Organization], error) {
+	args := mockStore.Called(ctx, opts)
 	return args.Get(0).(domain.ListResult[domain.Organization]), args.Error(1)
 }
 
-func (m *MockOrganizationStore) Delete(ctx context.Context, orgID string) error {
-	args := m.Called(ctx, orgID)
+func (mockStore *MockOrganizationStore) Delete(ctx context.Context, orgID string) error {
+	args := mockStore.Called(ctx, orgID)
 	return args.Error(0)
 }

@@ -32,6 +32,8 @@ type SubscriberRequest struct {
 	WebhookURL string `json:"webhookUrl" validate:"omitempty,url" example:"https://example.com/webhook"`
 	// Groups - list of group IDs this subscriber belongs to
 	Groups []string `json:"groups"`
+	// SubscribedEventTypes - list of event types this subscriber opted into
+	SubscribedEventTypes []string `json:"subscribedEventTypes"`
 	// Metadata - optional key-value pairs for additional data
 	Metadata map[string]string `json:"metadata"`
 	// Preferences - subscriber notification preferences
@@ -58,6 +60,8 @@ type SubscriberPatchRequest struct {
 	WebhookURL string `json:"webhookUrl" validate:"omitempty,url" example:"https://example.com/webhook"`
 	// Groups - list of group IDs this subscriber belongs to
 	Groups []string `json:"groups"`
+	// SubscribedEventTypes - list of event types this subscriber opted into
+	SubscribedEventTypes []string `json:"subscribedEventTypes"`
 	// Metadata - optional key-value pairs for additional data
 	Metadata map[string]string `json:"metadata"`
 	// Preferences - subscriber notification preferences
@@ -96,14 +100,15 @@ func (handler *SubscriberHandler) Create(fiberCtx *fiber.Ctx) error {
 	}
 
 	subscriber := domain.Subscriber{
-		ID:         subscriberID,
-		CustomerID: customerID,
-		Email:      body.Email,
-		Phone:      body.Phone,
-		PushToken:  body.PushToken,
-		WebhookURL: body.WebhookURL,
-		Groups:     body.Groups,
-		Metadata:   body.Metadata,
+		ID:                   subscriberID,
+		CustomerID:           customerID,
+		Email:                body.Email,
+		Phone:                body.Phone,
+		PushToken:            body.PushToken,
+		WebhookURL:           body.WebhookURL,
+		Groups:               body.Groups,
+		SubscribedEventTypes: body.SubscribedEventTypes,
+		Metadata:             body.Metadata,
 		Preferences: domain.SubscriberPrefs{
 			Channels:    body.Preferences.Channels,
 			Language:    body.Preferences.Language,
@@ -198,14 +203,15 @@ func (handler *SubscriberHandler) Put(fiberCtx *fiber.Ctx) error {
 	exists := err == nil
 
 	subscriber := domain.Subscriber{
-		ID:         subscriberID,
-		CustomerID: customerID,
-		Email:      body.Email,
-		Phone:      body.Phone,
-		PushToken:  body.PushToken,
-		WebhookURL: body.WebhookURL,
-		Groups:     body.Groups,
-		Metadata:   body.Metadata,
+		ID:                   subscriberID,
+		CustomerID:           customerID,
+		Email:                body.Email,
+		Phone:                body.Phone,
+		PushToken:            body.PushToken,
+		WebhookURL:           body.WebhookURL,
+		Groups:               body.Groups,
+		SubscribedEventTypes: body.SubscribedEventTypes,
+		Metadata:             body.Metadata,
 		Preferences: domain.SubscriberPrefs{
 			Channels:    body.Preferences.Channels,
 			Language:    body.Preferences.Language,
@@ -326,6 +332,9 @@ func (handler *SubscriberHandler) Delete(fiberCtx *fiber.Ctx) error {
 func (handler *SubscriberHandler) List(fiberCtx *fiber.Ctx) error {
 	customerID := httpx.CustomerIDFromCtx(fiberCtx)
 	opts := httpx.ParseListOptions(fiberCtx, customerID)
+	if eventType := httpx.EventTypeFilterFromQuery(fiberCtx); eventType != "" {
+		opts.Filter["subscribedEventTypes"] = eventType
+	}
 
 	result, err := handler.store.List(context.Background(), opts)
 	if err != nil {

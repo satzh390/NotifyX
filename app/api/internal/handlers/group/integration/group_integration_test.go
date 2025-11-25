@@ -172,7 +172,7 @@ func TestIntegration_Group_Patch(t *testing.T) {
 	groupID := uuid.NewString()
 	group := domain.Group{
 		ID:          groupID,
-		OrgID:       "test-org-integration",
+		CustomerID:  "test-customer-integration",
 		Name:        "Old Name",
 		Description: "Old Description",
 	}

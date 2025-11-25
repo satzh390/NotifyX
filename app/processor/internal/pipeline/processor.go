@@ -17,26 +17,46 @@ import (
 	"github.com/notifyx/processor/internal/event"
 	"github.com/notifyx/processor/internal/fanout"
 	"github.com/notifyx/processor/internal/filter"
-	"github.com/notifyx/processor/internal/recipients"
+)
+
+type (
+	KafkaReader interface {
+		FetchMessage(ctx context.Context) (kafka.Message, error)
+		CommitMessages(ctx context.Context, msgs ...kafka.Message) error
+		Close() error
+	}
+
+	KafkaWriter interface {
+		WriteMessages(ctx context.Context, msgs ...kafka.Message) error
+		Close() error
+	}
+
+	RecipientResolver interface {
+		Stream(ctx context.Context, customerID, eventType string, recipients domain.Recipients, visitor func(domain.Subscriber) error) error
+	}
+
+	SubscriberFilter interface {
+		Apply(subscribers []domain.Subscriber, rule domain.Rule) []filter.FilteredSubscriber
+	}
 )
 
 type Processor struct {
-	reader       *kafka.Reader
-	dlq          *kafka.Writer
-	resolver     *recipients.Resolver
+	reader       KafkaReader
+	dlq          KafkaWriter
+	resolver     RecipientResolver
 	ruleResolver *resolver.RuleResolver
-	filters      *filter.PreferencesFilter
+	filters      SubscriberFilter
 	fanout       fanout.Publisher
 	stores       storage.Stores
 	logger       *slog.Logger
 }
 
 type Options struct {
-	Reader       *kafka.Reader
-	DLQ          *kafka.Writer
-	Resolver     *recipients.Resolver
+	Reader       KafkaReader
+	DLQ          KafkaWriter
+	Resolver     RecipientResolver
 	RuleResolver *resolver.RuleResolver
-	Filter       *filter.PreferencesFilter
+	Filter       SubscriberFilter
 	Fanout       fanout.Publisher
 	Stores       storage.Stores
 	Logger       *slog.Logger
@@ -124,7 +144,7 @@ func (processor *Processor) handleMessage(ctx context.Context, msg kafka.Message
 		return nil
 	}
 
-	err = processor.resolver.Stream(ctx, env.CustomerID, recipients, func(subscriber domain.Subscriber) error {
+	err = processor.resolver.Stream(ctx, env.CustomerID, env.Type, recipients, func(subscriber domain.Subscriber) error {
 		// For direct recipients (empty ID), use email/phone for deduplication
 		// For regular subscribers, use ID
 		key := getSubscriberIdentifier(subscriber)

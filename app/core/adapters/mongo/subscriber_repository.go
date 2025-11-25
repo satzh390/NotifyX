@@ -50,7 +50,7 @@ func (repo *SubscriberRepository) Get(ctx context.Context, customerID, subscribe
 }
 
 func (repo *SubscriberRepository) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Subscriber], error) {
-	filter := BuildBsonFilter(opts)
+	filter := buildSubscriberFilter(opts)
 	page, pageSize := PageOrDefaultParam(opts)
 	totalCount, err := repo.collection.CountDocuments(ctx, filter)
 	if err != nil {
@@ -99,3 +99,13 @@ func (repo *SubscriberRepository) Delete(ctx context.Context, customerID, subscr
 	return nil
 }
 
+func buildSubscriberFilter(opts domain.ListOptions) bson.M {
+	filter := BuildBsonFilter(opts)
+	if eventType := opts.Filter["subscribedEventTypes"]; eventType != "" {
+		values := ParseCommaSeparatedString(eventType)
+		if len(values) > 0 {
+			filter["subscribedEventTypes"] = bson.M{"$in": values}
+		}
+	}
+	return filter
+}

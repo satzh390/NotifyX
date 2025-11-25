@@ -132,9 +132,9 @@ func TestGroupHandler_Put(t *testing.T) {
 
 	groupID := uuid.NewString()
 	existingGroup := domain.Group{
-		ID:    groupID,
-		OrgID: "test-org",
-		Name:  "Old Name",
+		ID:         groupID,
+		CustomerID: "test-customer",
+		Name:       "Old Name",
 	}
 
 	// Test PUT with existing group (update)
@@ -197,9 +197,9 @@ func TestGroupHandler_Patch(t *testing.T) {
 
 	groupID := uuid.NewString()
 	existingGroup := domain.Group{
-		ID:    groupID,
-		OrgID: "test-org",
-		Name:  "Old Name",
+		ID:         groupID,
+		CustomerID: "test-customer",
+		Name:       "Old Name",
 	}
 
 	store.On("Get", mock.Anything, "test-customer", groupID).Return(existingGroup, nil).Once()
@@ -285,8 +285,8 @@ func TestGroupHandler_List(t *testing.T) {
 
 	expectedResult := domain.ListResult[domain.Group]{
 		Items: []domain.Group{
-			{ID: "group-1", OrgID: "test-org", Name: "Group 1"},
-			{ID: "group-2", OrgID: "test-org", Name: "Group 2"},
+			{ID: "group-1", CustomerID: "test-customer", Name: "Group 1"},
+			{ID: "group-2", CustomerID: "test-customer", Name: "Group 2"},
 		},
 		Pagination: domain.PaginationResult{
 			Page:       0,
@@ -319,8 +319,8 @@ func TestGroupHandler_List_WithSorting(t *testing.T) {
 
 	expectedResult := domain.ListResult[domain.Group]{
 		Items: []domain.Group{
-			{ID: "group-1", OrgID: "test-org", Name: "A Group"},
-			{ID: "group-2", OrgID: "test-org", Name: "B Group"},
+			{ID: "group-1", CustomerID: "test-customer", Name: "A Group"},
+			{ID: "group-2", CustomerID: "test-customer", Name: "B Group"},
 		},
 		Pagination: domain.PaginationResult{
 			Page:       0,

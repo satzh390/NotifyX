@@ -52,8 +52,8 @@ func main() {
 	}()
 
 	subCache := cache.SubscriberCache(cache.NoopSubscriberCache{})
+	ruleCache := resolver.RuleCache(resolver.NoopRuleCache{})
 	var redisClient *redis.Client
-	var ruleCache resolver.RuleCache
 
 	if cfg.Cache.Redis.Enabled {
 		redisClient = redis.NewClient(&redis.Options{
@@ -62,18 +62,10 @@ func main() {
 			Password: cfg.Cache.Redis.Pass,
 		})
 		if err := redisClient.Ping(ctx).Err(); err != nil {
-			logger.Warn("redis disabled due to ping error, using in-memory cache", slog.String("error", err.Error()))
-			// Fallback to in-memory LRU cache
-			if memCache, err := resolver.NewMemoryRuleCache(5000, cfg.Cache.Redis.TTL); err == nil {
-				ruleCache = memCache
-				logger.Info("in-memory LRU cache enabled for rules (capacity: 5000)")
-			} else {
-				ruleCache = resolver.NoopRuleCache{}
-				logger.Warn("failed to create in-memory cache, using no-op cache", slog.String("error", err.Error()))
-			}
+			logger.Warn("redis cache disabled due to ping error, falling back to direct DB lookups", slog.String("error", err.Error()))
 		} else {
 			subCache = cache.NewRedisSubscriberCache(redisClient, cfg.Cache.Redis.TTL)
-			ruleCache = resolver.NewRedisRuleCache(redisClient, cfg.Cache.Redis.TTL, cfg.Cache.Redis.TTL/6)
+			ruleCache = resolver.NewRedisRuleCache(redisClient, cfg.Cache.Redis.TTL)
 			logger.Info("redis cache enabled for subscribers and rules")
 		}
 		defer func() {
@@ -82,18 +74,7 @@ func main() {
 			}
 		}()
 	} else {
-		// No Redis - use in-memory LRU cache
-		ttl := cfg.Cache.Redis.TTL
-		if ttl <= 0 {
-			ttl = 5 * time.Minute // Default TTL if not configured
-		}
-		if memCache, err := resolver.NewMemoryRuleCache(5000, ttl); err == nil {
-			ruleCache = memCache
-			logger.Info("in-memory LRU cache enabled for rules (capacity: 5000)")
-		} else {
-			ruleCache = resolver.NoopRuleCache{}
-			logger.Warn("failed to create in-memory cache, using no-op cache", slog.String("error", err.Error()))
-		}
+		logger.Info("redis cache disabled; rule resolver will fetch directly from storage")
 	}
 
 	reader := kafka.NewReader(cfg.ReaderConfig())
@@ -119,10 +100,8 @@ func main() {
 	}()
 
 	ruleResolver := resolver.NewRuleResolver(resolver.Options{
-		Store:      stores.Rules,
-		Cache:      ruleCache,
-		CacheTTL:   cfg.Cache.Redis.TTL,
-		VersionTTL: cfg.Cache.Redis.TTL / 6, // Version TTL is 1/6th of cache TTL for faster invalidation
+		Store: stores.Rules,
+		Cache: ruleCache,
 	})
 
 	proc := pipeline.NewProcessor(pipeline.Options{

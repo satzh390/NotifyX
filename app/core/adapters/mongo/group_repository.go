@@ -51,7 +51,7 @@ func (repo *GroupRepository) Get(ctx context.Context, customerID, groupID string
 }
 
 func (repo *GroupRepository) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Group], error) {
-	filter := BuildBsonFilter(opts)
+	filter := buildGroupFilter(opts)
 	page, pageSize := PageOrDefaultParam(opts)
 	totalCount, err := repo.collection.CountDocuments(ctx, filter)
 	if err != nil {
@@ -101,3 +101,13 @@ func (repo *GroupRepository) Delete(ctx context.Context, customerID, groupID str
 	return nil
 }
 
+func buildGroupFilter(opts domain.ListOptions) bson.M {
+	filter := BuildBsonFilter(opts)
+	if eventType := opts.Filter["subscribedEventTypes"]; eventType != "" {
+		values := ParseCommaSeparatedString(eventType)
+		if len(values) > 0 {
+			filter["subscribedEventTypes"] = bson.M{"$in": values}
+		}
+	}
+	return filter
+}

@@ -16,11 +16,11 @@ type mockValidator struct {
 	err    error
 }
 
-func (m *mockValidator) Validate(ctx context.Context, token string) (Claims, error) {
-	if m.err != nil {
-		return Claims{}, m.err
+func (validator *mockValidator) Validate(ctx context.Context, token string) (Claims, error) {
+	if validator.err != nil {
+		return Claims{}, validator.err
 	}
-	return m.claims, nil
+	return validator.claims, nil
 }
 
 func TestRequireAuth(t *testing.T) {

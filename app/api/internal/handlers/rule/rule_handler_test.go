@@ -42,7 +42,7 @@ func TestRuleHandler_Create(t *testing.T) {
 	store.On("Put", mock.Anything, mock.MatchedBy(func(r domain.Rule) bool {
 		return r.EventType == "order.created" && r.CustomerID == "test-customer"
 	})).Return(nil).Once()
-	store.On("Get", mock.Anything, "test-org", "order.created").Return(domain.Rule{
+	store.On("Get", mock.Anything, "test-customer", "order.created").Return(domain.Rule{
 		EventType: "order.created",
 		CustomerID: "test-customer",
 		Channels:  []domain.ChannelType{domain.ChannelEmail, domain.ChannelSMS},
@@ -100,7 +100,7 @@ func TestRuleHandler_Get(t *testing.T) {
 		Channels:  []domain.ChannelType{domain.ChannelEmail},
 	}
 
-	store.On("Get", mock.Anything, "test-org", eventType).Return(expectedRule, nil).Once()
+	store.On("Get", mock.Anything, "test-customer", eventType).Return(expectedRule, nil).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/rules/"+eventType, nil)
 	resp, err := app.Test(req)
@@ -119,7 +119,7 @@ func TestRuleHandler_Get(t *testing.T) {
 func TestRuleHandler_Get_NotFound(t *testing.T) {
 	app, store := setupRuleTestApp()
 
-	store.On("Get", mock.Anything, "test-org", "non-existent").Return(domain.Rule{}, storage.ErrNotFound).Once()
+	store.On("Get", mock.Anything, "test-customer", "non-existent").Return(domain.Rule{}, storage.ErrNotFound).Once()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/rules/non-existent", nil)
 	resp, err := app.Test(req)
@@ -141,11 +141,11 @@ func TestRuleHandler_Put(t *testing.T) {
 	}
 
 	// Test PUT with existing rule (update)
-	store.On("Get", mock.Anything, "test-org", eventType).Return(existingRule, nil).Once()
+	store.On("Get", mock.Anything, "test-customer", eventType).Return(existingRule, nil).Once()
 	store.On("Put", mock.Anything, mock.MatchedBy(func(r domain.Rule) bool {
 		return r.EventType == eventType && len(r.Channels) == 2
 	})).Return(nil).Once()
-	store.On("Get", mock.Anything, "test-org", eventType).Return(domain.Rule{
+	store.On("Get", mock.Anything, "test-customer", eventType).Return(domain.Rule{
 		EventType: eventType,
 		CustomerID: "test-customer",
 		Channels:  []domain.ChannelType{domain.ChannelEmail, domain.ChannelSMS},
@@ -176,11 +176,11 @@ func TestRuleHandler_Put_Create(t *testing.T) {
 	eventType := "order.created"
 
 	// Test PUT with non-existing rule (create)
-	store.On("Get", mock.Anything, "test-org", eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
+	store.On("Get", mock.Anything, "test-customer", eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
 	store.On("Put", mock.Anything, mock.MatchedBy(func(r domain.Rule) bool {
 		return r.EventType == eventType
 	})).Return(nil).Once()
-	store.On("Get", mock.Anything, "test-org", eventType).Return(domain.Rule{
+	store.On("Get", mock.Anything, "test-customer", eventType).Return(domain.Rule{
 		EventType: eventType,
 		CustomerID: "test-customer",
 	}, nil).Once()
@@ -211,7 +211,7 @@ func TestRuleHandler_Patch(t *testing.T) {
 		Channels:  []domain.ChannelType{domain.ChannelEmail},
 	}
 
-	store.On("Get", mock.Anything, "test-org", eventType).Return(existingRule, nil).Once()
+	store.On("Get", mock.Anything, "test-customer", eventType).Return(existingRule, nil).Once()
 	store.On("Put", mock.Anything, mock.MatchedBy(func(r domain.Rule) bool {
 		return r.EventType == eventType && len(r.Channels) == 2
 	})).Return(nil).Once()
@@ -236,7 +236,7 @@ func TestRuleHandler_Patch_NotFound(t *testing.T) {
 
 	eventType := "order.created"
 
-	store.On("Get", mock.Anything, "test-org", eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
+	store.On("Get", mock.Anything, "test-customer", eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
 
 	patch := map[string]interface{}{
 		"channels": []string{"email", "sms"},
@@ -258,7 +258,7 @@ func TestRuleHandler_Delete(t *testing.T) {
 
 	eventType := "order.created"
 
-	store.On("Delete", mock.Anything, "test-org", eventType).Return(nil).Once()
+	store.On("Delete", mock.Anything, "test-customer", eventType).Return(nil).Once()
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/rules/"+eventType, nil)
 	resp, err := app.Test(req)
@@ -274,8 +274,8 @@ func TestRuleHandler_List(t *testing.T) {
 
 	expectedResult := domain.ListResult[domain.Rule]{
 		Items: []domain.Rule{
-			{EventType: "order.created", OrgID: "test-org"},
-			{EventType: "order.updated", OrgID: "test-org"},
+			{EventType: "order.created", CustomerID: "test-customer"},
+			{EventType: "order.updated", CustomerID: "test-customer"},
 		},
 		Pagination: domain.PaginationResult{
 			Page:       0,

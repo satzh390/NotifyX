@@ -20,16 +20,17 @@ const (
 )
 
 type Subscriber struct {
-	ID          string            `json:"subscriberId" bson:"subscriberId" immutable:"true"`
-	CustomerID  string            `json:"customerId" bson:"customerId" immutable:"true"`
-	Email       string            `json:"email,omitempty" bson:"email,omitempty"`
-	Phone       string            `json:"phone,omitempty" bson:"phone,omitempty"`
-	PushToken   string            `json:"pushToken,omitempty" bson:"pushToken,omitempty"`
-	WebhookURL  string            `json:"webhookUrl,omitempty" bson:"webhookUrl,omitempty"`
-	Preferences SubscriberPrefs   `json:"preferences" bson:"preferences"`
-	Groups      []string          `json:"groups" bson:"groups"`
-	Metadata    map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
-	CreatedAt   time.Time         `json:"createdAt" bson:"createdAt" immutable:"true"`
+	ID                   string            `json:"subscriberId" bson:"subscriberId" immutable:"true"`
+	CustomerID           string            `json:"customerId" bson:"customerId" immutable:"true"`
+	Email                string            `json:"email,omitempty" bson:"email,omitempty"`
+	Phone                string            `json:"phone,omitempty" bson:"phone,omitempty"`
+	PushToken            string            `json:"pushToken,omitempty" bson:"pushToken,omitempty"`
+	WebhookURL           string            `json:"webhookUrl,omitempty" bson:"webhookUrl,omitempty"`
+	Preferences          SubscriberPrefs   `json:"preferences" bson:"preferences"`
+	Groups               []string          `json:"groups" bson:"groups"`
+	SubscribedEventTypes []string          `json:"subscribedEventTypes,omitempty" bson:"subscribedEventTypes,omitempty"`
+	Metadata             map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
+	CreatedAt            time.Time         `json:"createdAt" bson:"createdAt" immutable:"true"`
 }
 
 type SubscriberPrefs struct {
@@ -45,12 +46,13 @@ type TimeWindow struct {
 }
 
 type Group struct {
-	ID          string            `json:"groupId" bson:"groupId" immutable:"true"`
-	CustomerID  string            `json:"customerId" bson:"customerId" immutable:"true"`
-	Name        string            `json:"name" bson:"name"`
-	Description string            `json:"description,omitempty" bson:"description,omitempty"`
-	Subscribers []string          `json:"subscribers" bson:"subscribers"`
-	Metadata    map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
+	ID                   string            `json:"groupId" bson:"groupId" immutable:"true"`
+	CustomerID           string            `json:"customerId" bson:"customerId" immutable:"true"`
+	Name                 string            `json:"name" bson:"name"`
+	Description          string            `json:"description,omitempty" bson:"description,omitempty"`
+	Subscribers          []string          `json:"subscribers" bson:"subscribers"`
+	SubscribedEventTypes []string          `json:"subscribedEventTypes,omitempty" bson:"subscribedEventTypes,omitempty"`
+	Metadata             map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
 }
 
 // TemplateContent represents channel-specific template content

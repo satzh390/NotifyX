@@ -58,7 +58,7 @@ Responsibilities:
 - Expand recipients using `subscriberIds[]`, `groups[]`, `broadcast`, and rule defaults
 - Merge and deduplicate subscriber list
 - Filter subscribers by preferences (disabled channels, DND, unsubscribed event types)
-- Generate idempotency keys: `<org_id>:<event_id>:<channel>`
+- Generate idempotency keys: `<customerId>:<eventId>:<channel>`
 - Produce delivery tasks to per-channel queues
 
 ### 3) Message Delivery Worker Layer
@@ -80,7 +80,7 @@ UI features:
 - Manage templates (preview + versioning)
 - Manage rules and test-send
 - View event → fanout → delivery logs, traces, retries
-- Search/filter by `org_id`, event type, `subscriberId`, `groupId`, channel, status
+- Search/filter by `customerId`, event type, `subscriberId`, `groupId`, channel, status
 
 ---
 
@@ -97,7 +97,7 @@ UI features:
 ## 🔷 Authentication & Authorization
 
 - Tenants use external OAuth2/OIDC; NotifyX validates tokens
-- Required metadata: `org_id` (token claim or header)
+- Required metadata: `customerId` (token claim or header, optionally paired with an `orgId` claim for SaaS providers)
 - Scopes: `notify:read`, `notify:write`, `notify:admin`
 - API keys supported for server-to-server integrations
 
@@ -107,21 +107,22 @@ UI features:
 
 - Subscriber
   - `subscriberId` (external eg: UserId)
-  - `org_id` (For Non SAAS product like ecommerce, org_id can be some unique identifier like flipkart,  myntra)
+  - `customerId` (scopes the subscriber to a tenant or business unit; optionally pair with `orgId` for SaaS providers)
   - `email`, `phone`, `pushToken`, `webhookUrl`
   - `preferences` { channels: { email/sms/push/webhook: true/false }, language, allowedDays[], notificationWindow { start, end } }
-  - `subscribedEventTypes: [string]`(Will add this preference later)
+  - `subscribedEventTypes: [string]`
   - `groups: [groupId]`
   - `metadata` (optional)
 - Group
-  - `groupId`, `org_id`, `name`, `description`
+  - `groupId`, `customerId`, `name`, `description`
   - `subscribers: [subscriberId]` (many-to-many)
+  - `subscribedEventTypes: [string]`
   - `metadata` (optional)
 - Event
-  - `eventId`, `org_id`, `type`, `payload/data`
+  - `eventId`, `customerId`, `type`, `payload/data`
   - `recipients` { `subscriberIds?`, `groups?`, `broadcast?` }
 - Rule
-  - `eventType`, `org_id`, `channels[]`, `defaultRecipients` (subscriberIds/groups/broadcast)
+  - `eventType`, `customerId`, `channels[]`, `defaultRecipients` (subscriberIds/groups/broadcast)
 - Channel
   - `type`: `email` | `sms` | `push` | `webhook` | `custom`
   - `templateRef`
@@ -134,7 +135,7 @@ UI features:
 
 ```json
 {
-  "org_id":"acme",
+  "customerId":"acme-store",
   "type":"ORDER_DELAYED",
   "recipients":{
     "subscriberIds":["s1"],
@@ -154,9 +155,9 @@ UI features:
 
 ## 🔷 Multi-Tenancy Notes
 
-- All entities partitioned by `org_id`
+- All entities partitioned by `customerId` (optionally nested under an `orgId`)
 - Tenant isolation enforced at API, storage, and delivery pipeline
-- Storage options: schema-per-tenant, table-per-tenant, or shared table with `org_id` partition(start with shared table with `org_id` partition)
+- Storage options: schema-per-tenant, table-per-tenant, or shared table with a `customerId` (and optional `orgId`) partition (start with shared table + partition)
 
 ---
 
@@ -165,7 +166,7 @@ UI features:
 - Delivery semantics: at-least-once default; exactly-once optional with idempotent stores
 - Quotas per-org and per-channel rate limiting
 - Retries + DLQ + DLQ inspection UI
-- Observability: Prometheus metrics, OpenTelemetry traces, structured logs with `org_id`
+- Observability: Prometheus metrics, OpenTelemetry traces, structured logs with `customerId`
 - Secrets stored in secret manager (Vault/AWS Secrets Manager)
 
 ---
@@ -202,7 +203,7 @@ This section breaks the work into concrete milestones, deliverables, acceptance 
   - `POST /events` ingests events and results in delivery attempts in worker logs
   - Subscribers and groups CRUD working with in-memory or simple persistent store
   - Templates can be created and used by rules
-  - Delivery logs show per-`org_id` status
+  - Delivery logs show per-`customerId` (and `orgId` when relevant) status
 - Tasks (incremental):
   1. Implement `notifyx-api` endpoints for Subscriber, Group, Template, Rule, Event ingestion
   2. Implement `notifyx-processor` that reads events, expands recipients (subscriberIds/groups/broadcast), filters preferences, and enqueues tasks (in-memory queue for MVP)
