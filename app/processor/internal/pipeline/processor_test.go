@@ -58,9 +58,6 @@ func TestProcessor_HandleMessage_Success(t *testing.T) {
 		TemplateRefs: map[domain.ChannelType]string{
 			domain.ChannelEmail: "template-1",
 		},
-		DefaultRecipients: domain.Recipients{
-			SubscriberIDs: []string{"sub-1"},
-		},
 	}
 
 	subscriber := domain.Subscriber{
@@ -206,9 +203,6 @@ func TestProcessor_HandleMessage_NoEligibleSubscribers(t *testing.T) {
 		TemplateRefs: map[domain.ChannelType]string{
 			domain.ChannelEmail: "template-1",
 		},
-		DefaultRecipients: domain.Recipients{
-			SubscriberIDs: []string{"sub-1"},
-		},
 	}
 
 	subscriber := domain.Subscriber{
@@ -270,9 +264,6 @@ func TestProcessor_HandleMessage_ResolverError(t *testing.T) {
 		TemplateRefs: map[domain.ChannelType]string{
 			domain.ChannelEmail: "template-1",
 		},
-		DefaultRecipients: domain.Recipients{
-			SubscriberIDs: []string{"sub-1"},
-		},
 	}
 
 	envelope := event.CloudEventEnvelope[map[string]any]{
@@ -314,9 +305,6 @@ func TestProcessor_HandleMessage_PublisherError(t *testing.T) {
 		Channels:   []domain.ChannelType{domain.ChannelEmail},
 		TemplateRefs: map[domain.ChannelType]string{
 			domain.ChannelEmail: "template-1",
-		},
-		DefaultRecipients: domain.Recipients{
-			SubscriberIDs: []string{"sub-1"},
 		},
 	}
 

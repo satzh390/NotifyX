@@ -134,8 +134,7 @@ go run ./cmd
 2. **Rule Resolution**: Looks up rules for the event type and customer
 3. **Recipient Resolution**: 
    - If event has explicit recipients → uses them
-   - If event has no recipients → uses rule's `defaultRecipients`
-   - If no rule defaults → uses subscribers/groups subscribed to the event type
+   - If event has no recipients → uses subscribers/groups subscribed to the event type
 4. **Filtering**: Applies subscriber preferences (disabled channels, DND windows, unsubscribed event types)
 5. **Fanout**: Publishes delivery tasks to per-channel worker topics
 6. **Error Handling**: Failed events are sent to DLQ topic

@@ -57,7 +57,7 @@ NotifyX is separated into four horizontally scalable layers, each pluggable:
 **Template & Rule Configuration**
 
 - CRUD templates (Email, SMS, Push, Webhook JSON)
-- Rules map `eventType` → channels + template + default recipients
+- Rules map `eventType` → channels + template
 - Supported recipient types: `subscriberIds[]`, `groups[]`, `broadcast` (all subscribers), `directEmails[]`, `directPhones[]`
 - Versioning, preview, test-send
 
@@ -66,11 +66,10 @@ NotifyX is separated into four horizontally scalable layers, each pluggable:
 Responsibilities:
 
 - Receive events via HTTP `/events` or broker (Kafka/NATS/RabbitMQ/SQS)
-- Load rule metadata and default recipients
+- Load rule metadata
 - **Recipients are optional in events** - if not provided, system uses:
-  1. Rule's `defaultRecipients` (if configured)
-  2. Subscribers/groups that have subscribed to the event type (`subscribedEventTypes`)
-- Expand recipients using `subscriberIds[]`, `groups[]`, `broadcast`, `directEmails[]`, `directPhones[]`, and rule defaults
+  1. Subscribers/groups that have subscribed to the event type (`subscribedEventTypes`)
+- Expand recipients using `subscriberIds[]`, `groups[]`, `broadcast`, `directEmails[]`, `directPhones[]`
 - Merge and deduplicate subscriber list
 - Filter subscribers by preferences (disabled channels, DND, unsubscribed event types)
 - Generate idempotency keys: `<customerId>:<eventId>:<channel>`
@@ -78,8 +77,7 @@ Responsibilities:
 
 **Recipient Resolution Priority:**
 1. Explicit recipients in event (if provided)
-2. Rule's `defaultRecipients` (if no explicit recipients)
-3. Subscribers/groups subscribed to the event type (if no explicit recipients and no rule defaults)
+2. Subscribers/groups subscribed to the event type (if no explicit recipients)
 
 ### 3) Message Delivery Worker Layer
 
@@ -168,7 +166,6 @@ UI features:
   - `eventType` (immutable)
   - `customerId` (immutable)
   - `channels[]`
-  - `defaultRecipients` (subscriberIds/groups/broadcast/directEmails/directPhones) — used when event doesn't specify recipients
   - `templateRefs` (map of channel → template ID)
   - `createdAt` (immutable), `updatedAt`
 
@@ -225,9 +222,8 @@ UI features:
 
 2) Processor loads rule + resolves recipients:
    - If event has explicit recipients → use them
-   - If event has no recipients → use rule's `defaultRecipients`
-   - If no rule defaults → use subscribers/groups that have `subscribedEventTypes` matching the event type
-3) Expand recipients: explicit `subscriberIds` + members of groups + direct emails/phones + rule defaults (if applicable)
+   - If event has no recipients → use subscribers/groups that have `subscribedEventTypes` matching the event type
+3) Expand recipients: explicit `subscriberIds` + members of groups + direct emails/phones
 4) Deduplicate subscriberIds
 5) For each subscriber → expand per-channel tasks (respecting preferences and DND)
 6) Workers send notifications + log status
@@ -294,7 +290,7 @@ This section breaks the work into concrete milestones, deliverables, acceptance 
   - Delivery logs show per-`customerId` (and `orgId` when relevant) status
 - Tasks (incremental):
   1. Implement `notifyx-api` endpoints for Organization, Customer, Subscriber, Group, Template, Rule, Event ingestion
-  2. Implement `notifyx-processor` that reads events, resolves recipients (explicit → rule defaults → interested subscribers), expands recipients (subscriberIds/groups/broadcast/directEmails/directPhones), filters preferences, and enqueues tasks
+  2. Implement `notifyx-processor` that reads events, resolves recipients (explicit → interested subscribers), expands recipients (subscriberIds/groups/broadcast/directEmails/directPhones), filters preferences, and enqueues tasks
   3. Implement `notifyx-worker` for email using SMTP/SendGrid with template rendering and retry logic (DLQ)
   4. Build minimal `notifyx-console` to manage organizations, customers, subscribers, groups, templates, and view logs
   5. Add unit tests and a simple integration test to exercise event→delivery path

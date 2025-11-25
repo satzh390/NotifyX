@@ -87,13 +87,12 @@ type Template struct {
 }
 
 type Rule struct {
-	EventType         string                 `json:"eventType" bson:"eventType" immutable:"true"`
-	CustomerID        string                 `json:"customerId" bson:"customerId" immutable:"true"`
-	Channels          []ChannelType          `json:"channels" bson:"channels"`
-	DefaultRecipients Recipients             `json:"defaultRecipients" bson:"defaultRecipients"`
-	TemplateRefs      map[ChannelType]string `json:"templateRefs" bson:"templateRefs"`
-	CreatedAt         time.Time              `json:"createdAt" bson:"createdAt" immutable:"true"`
-	UpdatedAt         time.Time              `json:"updatedAt" bson:"updatedAt"`
+	EventType    string                 `json:"eventType" bson:"eventType" immutable:"true"`
+	CustomerID   string                 `json:"customerId" bson:"customerId" immutable:"true"`
+	Channels     []ChannelType          `json:"channels" bson:"channels"`
+	TemplateRefs map[ChannelType]string `json:"templateRefs" bson:"templateRefs"`
+	CreatedAt    time.Time              `json:"createdAt" bson:"createdAt" immutable:"true"`
+	UpdatedAt    time.Time              `json:"updatedAt" bson:"updatedAt"`
 }
 
 type Event struct {
