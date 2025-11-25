@@ -75,9 +75,12 @@ func TestProcessor_HandleMessage_Success(t *testing.T) {
 	}
 
 	envelope := event.CloudEventEnvelope[map[string]any]{
-		ID:         "event-1",
-		CustomerID: customerID,
-		Type:       eventType,
+		ID:          "event-1",
+		Source:      "test-source",
+		SpecVersion: "1.0",
+		CustomerID:  customerID,
+		Type:        eventType,
+		Data:        map[string]any{"orderId": "123"},
 		Recipients: domain.Recipients{
 			SubscriberIDs: []string{"sub-1"},
 		},
@@ -90,6 +93,8 @@ func TestProcessor_HandleMessage_Success(t *testing.T) {
 		Value: envelopeJSON,
 	}
 
+	// RuleResolver first tries to load global rule (customerID = ""), then customer-specific rule
+	ruleStore.On("Get", mock.Anything, "", eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
 	ruleStore.On("Get", mock.Anything, customerID, eventType).Return(rule, nil).Once()
 	resolver.On("Stream", mock.Anything, customerID, eventType, mock.Anything, mock.AnythingOfType("func(domain.Subscriber) error")).
 		Run(func(args mock.Arguments) {
@@ -135,9 +140,11 @@ func TestProcessor_HandleMessage_MissingCustomerID(t *testing.T) {
 	processor, _, _, _, _, _, _ := setupTestProcessor()
 
 	envelope := event.CloudEventEnvelope[map[string]any]{
-		ID:         "event-1",
-		CustomerID: "", // Missing customerID
-		Type:       "order.created",
+		ID:          "event-1",
+		Source:      "test-source",
+		SpecVersion: "1.0",
+		CustomerID:  "", // Missing customerID
+		Type:        "order.created",
 		Recipients: domain.Recipients{
 			SubscriberIDs: []string{"sub-1"},
 		},
@@ -161,9 +168,11 @@ func TestProcessor_HandleMessage_RuleNotFound(t *testing.T) {
 	eventType := "order.created"
 
 	envelope := event.CloudEventEnvelope[map[string]any]{
-		ID:         "event-1",
-		CustomerID: customerID,
-		Type:       eventType,
+		ID:          "event-1",
+		Source:      "test-source",
+		SpecVersion: "1.0",
+		CustomerID:  customerID,
+		Type:        eventType,
 		Recipients: domain.Recipients{
 			SubscriberIDs: []string{"sub-1"},
 		},
@@ -175,6 +184,8 @@ func TestProcessor_HandleMessage_RuleNotFound(t *testing.T) {
 		Value: envelopeJSON,
 	}
 
+	// RuleResolver first tries to load global rule (customerID = ""), then customer-specific rule
+	ruleStore.On("Get", mock.Anything, "", eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
 	ruleStore.On("Get", mock.Anything, customerID, eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
 
 	err := processor.handleMessage(context.Background(), msg)
@@ -212,9 +223,12 @@ func TestProcessor_HandleMessage_NoEligibleSubscribers(t *testing.T) {
 	}
 
 	envelope := event.CloudEventEnvelope[map[string]any]{
-		ID:         "event-1",
-		CustomerID: customerID,
-		Type:       eventType,
+		ID:          "event-1",
+		Source:      "test-source",
+		SpecVersion: "1.0",
+		CustomerID:  customerID,
+		Type:        eventType,
+		Data:        map[string]any{"orderId": "123"},
 		Recipients: domain.Recipients{
 			SubscriberIDs: []string{"sub-1"},
 		},
@@ -227,6 +241,8 @@ func TestProcessor_HandleMessage_NoEligibleSubscribers(t *testing.T) {
 		Value: envelopeJSON,
 	}
 
+	// RuleResolver first tries to load global rule (customerID = ""), then customer-specific rule
+	ruleStore.On("Get", mock.Anything, "", eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
 	ruleStore.On("Get", mock.Anything, customerID, eventType).Return(rule, nil).Once()
 	resolver.On("Stream", mock.Anything, customerID, eventType, mock.Anything, mock.AnythingOfType("func(domain.Subscriber) error")).
 		Run(func(args mock.Arguments) {
@@ -260,9 +276,11 @@ func TestProcessor_HandleMessage_ResolverError(t *testing.T) {
 	}
 
 	envelope := event.CloudEventEnvelope[map[string]any]{
-		ID:         "event-1",
-		CustomerID: customerID,
-		Type:       eventType,
+		ID:          "event-1",
+		Source:      "test-source",
+		SpecVersion: "1.0",
+		CustomerID:  customerID,
+		Type:        eventType,
 		Recipients: domain.Recipients{
 			SubscriberIDs: []string{"sub-1"},
 		},
@@ -274,6 +292,8 @@ func TestProcessor_HandleMessage_ResolverError(t *testing.T) {
 		Value: envelopeJSON,
 	}
 
+	// RuleResolver first tries to load global rule (customerID = ""), then customer-specific rule
+	ruleStore.On("Get", mock.Anything, "", eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
 	ruleStore.On("Get", mock.Anything, customerID, eventType).Return(rule, nil).Once()
 	resolver.On("Stream", mock.Anything, customerID, eventType, mock.Anything, mock.AnythingOfType("func(domain.Subscriber) error")).
 		Return(errors.New("resolver error")).Once()
@@ -312,9 +332,12 @@ func TestProcessor_HandleMessage_PublisherError(t *testing.T) {
 	}
 
 	envelope := event.CloudEventEnvelope[map[string]any]{
-		ID:         "event-1",
-		CustomerID: customerID,
-		Type:       eventType,
+		ID:          "event-1",
+		Source:      "test-source",
+		SpecVersion: "1.0",
+		CustomerID:  customerID,
+		Type:        eventType,
+		Data:        map[string]any{"orderId": "123"},
 		Recipients: domain.Recipients{
 			SubscriberIDs: []string{"sub-1"},
 		},
@@ -327,6 +350,8 @@ func TestProcessor_HandleMessage_PublisherError(t *testing.T) {
 		Value: envelopeJSON,
 	}
 
+	// RuleResolver first tries to load global rule (customerID = ""), then customer-specific rule
+	ruleStore.On("Get", mock.Anything, "", eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
 	ruleStore.On("Get", mock.Anything, customerID, eventType).Return(rule, nil).Once()
 	resolver.On("Stream", mock.Anything, customerID, eventType, mock.Anything, mock.AnythingOfType("func(domain.Subscriber) error")).
 		Run(func(args mock.Arguments) {
