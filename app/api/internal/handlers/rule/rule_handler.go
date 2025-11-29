@@ -25,6 +25,9 @@ type RuleRequest struct {
 	Channels []domain.ChannelType `json:"channels"`
 	// TemplateRefs - template references by channel type
 	TemplateRefs map[domain.ChannelType]string `json:"templateRefs"`
+	// CustomFilter - optional custom filter configuration. The filter type must match a registered custom filter name.
+	// Custom filters are NOT applied to direct emails and phone numbers.
+	CustomFilter *domain.CustomFilterConfig `json:"customFilter,omitempty"`
 }
 
 // RulePatchRequest is used for PATCH requests - only mutable fields, no required validation
@@ -33,6 +36,9 @@ type RulePatchRequest struct {
 	Channels []domain.ChannelType `json:"channels"`
 	// TemplateRefs - template references by channel type
 	TemplateRefs map[domain.ChannelType]string `json:"templateRefs"`
+	// CustomFilter - optional custom filter configuration. The filter type must match a registered custom filter name.
+	// Custom filters are NOT applied to direct emails and phone numbers.
+	CustomFilter *domain.CustomFilterConfig `json:"customFilter,omitempty"`
 }
 
 // CreateRule godoc
@@ -58,6 +64,7 @@ func (handler *RuleHandler) Create(fiberCtx *fiber.Ctx) error {
 		CustomerID:   customerID,
 		Channels:     body.Channels,
 		TemplateRefs: body.TemplateRefs,
+		CustomFilter: body.CustomFilter,
 	}
 
 	if err := handler.store.Put(context.Background(), rule); err != nil {
@@ -142,6 +149,7 @@ func (handler *RuleHandler) Put(fiberCtx *fiber.Ctx) error {
 		CustomerID:   customerID,
 		Channels:     body.Channels,
 		TemplateRefs: body.TemplateRefs,
+		CustomFilter: body.CustomFilter,
 	}
 
 	if err := handler.store.Put(context.Background(), rule); err != nil {

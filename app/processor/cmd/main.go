@@ -18,6 +18,7 @@ import (
 	"github.com/notifyx/processor/internal/cache"
 	"github.com/notifyx/processor/internal/fanout"
 	"github.com/notifyx/processor/internal/filter"
+	_ "github.com/notifyx/processor/internal/filter/custom" // Import custom filters to trigger auto-registration
 	"github.com/notifyx/processor/internal/pipeline"
 	"github.com/notifyx/processor/internal/recipients"
 )
@@ -105,12 +106,21 @@ func main() {
 		Cache: ruleCache,
 	})
 
+	// Custom filters are automatically registered via init() functions in the custom package
+	// The import above triggers all init() functions which register the filters
+	logger.Info("custom filters auto-registered from custom package")
+
+	// Create default preferences filter and composite filter with registry
+	preferencesFilter := filter.NewPreferencesFilter()
+	filterRegistry := filter.DefaultFilterRegistry
+	compositeFilter := filter.NewCompositeFilter(preferencesFilter, filterRegistry)
+
 	proc := pipeline.NewProcessor(pipeline.Options{
 		Reader:       reader,
 		DLQ:          dlqWriter,
 		Resolver:     recipients.NewResolver(stores, subCache),
 		RuleResolver: ruleResolver,
-		Filter:       filter.NewPreferencesFilter(),
+		Filter:       compositeFilter,
 		Fanout:       publisher,
 		Stores:       stores,
 		Logger:       logger,

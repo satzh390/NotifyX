@@ -12,6 +12,12 @@ type FilteredSubscriber struct {
 	Channels   []domain.ChannelType
 }
 
+// SubscriberFilter defines the interface for filtering subscribers.
+// The message parameter contains the event payload for custom filter evaluation.
+type SubscriberFilter interface {
+	Apply(subscribers []domain.Subscriber, rule domain.Rule, message map[string]interface{}) []FilteredSubscriber
+}
+
 type PreferencesFilter struct {
 	now func() time.Time
 }
@@ -20,7 +26,7 @@ func NewPreferencesFilter() *PreferencesFilter {
 	return &PreferencesFilter{now: time.Now}
 }
 
-func (preferencesFilter *PreferencesFilter) Apply(subscribers []domain.Subscriber, rule domain.Rule) []FilteredSubscriber {
+func (preferencesFilter *PreferencesFilter) Apply(subscribers []domain.Subscriber, rule domain.Rule, message map[string]interface{}) []FilteredSubscriber {
 	now := preferencesFilter.now().UTC()
 	result := make([]FilteredSubscriber, 0, len(subscribers))
 	ruleChannels := map[domain.ChannelType]struct{}{}

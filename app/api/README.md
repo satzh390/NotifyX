@@ -1,41 +1,31 @@
-## notifyx-api
+# NotifyX API Service
 
 This service exposes the public REST interface used to manage organizations, customers, subscribers, groups, templates, rules, and ingest events.
 
-### Quick Start
+## Quick Start
 
 1. **Start local infrastructure:**
-   ```cmd
+   ```bash
    docker compose -f ../../docker-compose.local.yaml up -d
    ```
 
 2. **Run the API:**
-   ```cmd
+   ```bash
    go run ./cmd
    ```
 
 3. **Verify it's running:**
-   ```cmd
+   ```bash
    curl http://localhost:8080/health
    ```
 
 The API will be available at `http://localhost:8080` with Swagger docs at `http://localhost:8080/swagger/index.html`.
 
-### Running locally
-
-Edit `config/config.yaml` with your issuer/JWKS details, then run:
-
-```
-go run ./cmd
-```
-
-To load a different config path, set `NOTIFYX_API_CONFIG=/path/to/custom.yaml`.
-
-### Configuration
+## Configuration
 
 Configuration is loaded from `config/config.yaml` by default. To use a different config file, set the `NOTIFYX_API_CONFIG` environment variable:
 
-**Windows (Command Prompt):**
+**Windows:**
 ```cmd
 set NOTIFYX_API_CONFIG=C:\path\to\custom.yaml
 ```
@@ -45,7 +35,7 @@ set NOTIFYX_API_CONFIG=C:\path\to\custom.yaml
 export NOTIFYX_API_CONFIG=/path/to/custom.yaml
 ```
 
-#### Overriding Config Values with Environment Variables
+### Overriding Config Values with Environment Variables
 
 Any configuration value can be overridden using environment variables. The pattern is:
 - **Prefix**: `NOTIFYX_API_`
@@ -65,53 +55,17 @@ Any configuration value can be overridden using environment variables. The patte
 
 **How to use:**
 
-**Windows (Command Prompt):**
+**Windows:**
 ```cmd
-REM Override MongoDB URI
 set NOTIFYX_API_STORAGE__MONGO__URI=mongodb://production:27017
-
-REM Override OAuth issuer
 set NOTIFYX_API_OAUTH__ISSUER=https://auth.example.com
-
-REM Run the API
 go run ./cmd
 ```
 
 **Linux/Mac:**
 ```bash
-# Override MongoDB URI
 export NOTIFYX_API_STORAGE__MONGO__URI="mongodb://production:27017"
-
-# Override OAuth issuer
 export NOTIFYX_API_OAUTH__ISSUER="https://auth.example.com"
-
-# Run the API
-go run ./cmd
-```
-
-**Using a .env file:**
-
-**Windows (Command Prompt):**
-```cmd
-REM Create .env file with:
-REM NOTIFYX_API_STORAGE__MONGO__URI=mongodb://production:27017
-REM NOTIFYX_API_STORAGE__MONGO__DATABASE=notifyx_prod
-REM NOTIFYX_API_OAUTH__ISSUER=https://auth.example.com
-REM NOTIFYX_API_OAUTH__JWKS=https://auth.example.com/jwks
-
-REM Load and run (requires a .env loader or manual set commands)
-```
-
-**Linux/Mac:**
-```bash
-# .env file
-NOTIFYX_API_STORAGE__MONGO__URI=mongodb://production:27017
-NOTIFYX_API_STORAGE__MONGO__DATABASE=notifyx_prod
-NOTIFYX_API_OAUTH__ISSUER=https://auth.example.com
-NOTIFYX_API_OAUTH__JWKS=https://auth.example.com/jwks
-
-# Load and run
-source .env
 go run ./cmd
 ```
 
@@ -121,7 +75,7 @@ go run ./cmd
 - Array values (like `audiences`) should be comma-separated strings
 - The config file is still required - environment variables only override specific values
 
-### Authentication & Authorization
+## Authentication & Authorization
 
 1. Clients must send `Authorization: Bearer <access_token>` on every call.
 2. The API validates the JWT locally using the configured issuer + JWKS, ensuring signature, expiry, and (optionally) audience are correct. Required claims:
@@ -131,11 +85,11 @@ go run ./cmd
    - `notify:write` for mutating resources (e.g., `POST /subscribers`)
    - `notify:read` for read-only endpoints (e.g., `GET /subscribers/:id`)
 
-#### Getting an OAuth Token
+### Getting an OAuth Token
 
 To get an access token from the local OAuth server:
 
-**Windows (Command Prompt):**
+**Windows:**
 ```cmd
 curl -X POST "http://localhost:8081/default/token" -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials" -d "client_id=my-client" -d "client_secret=secret" -d "scope=notify:read notify:write"
 ```
@@ -152,29 +106,25 @@ curl -X POST "http://localhost:8081/default/token" \
 
 The response will contain an `access_token` field. Extract this token and use it in subsequent API calls.
 
-#### Example API Call
+### Example API Call
 
 Once you have the token, use it in the `Authorization` header:
 
-**Windows (Command Prompt):**
+**Windows:**
 ```cmd
 set TOKEN=YOUR_ACCESS_TOKEN_HERE
-curl -X GET "http://localhost:8080/api/v1/groups?page=0&pageSize=10&sortOrder=asc" -H "accept: application/json" -H "Authorization: Bearer %TOKEN%"
+curl -X GET "http://localhost:8080/api/v1/groups?page=0&pageSize=10" -H "accept: application/json" -H "Authorization: Bearer %TOKEN%"
 ```
 
 **Linux/Mac:**
 ```bash
 TOKEN="YOUR_ACCESS_TOKEN_HERE"
-curl -X GET "http://localhost:8080/api/v1/groups?page=0&pageSize=10&sortOrder=asc" \
+curl -X GET "http://localhost:8080/api/v1/groups?page=0&pageSize=10" \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-**Note:** Pagination is 0-based. Use `page=0` for the first page, `page=1` for the second page, etc.
-
-The service currently persists data via MongoDB through `core/adapters/mongo`. Configure `storage.mongo` in `config/config.yaml` (or override via env) to point at your local cluster or the Docker Compose Mongo service.
-
-### Pagination
+## Pagination
 
 All list endpoints support pagination with the following query parameters:
 - `page` (0-based): Page number (default: 0)
@@ -182,19 +132,54 @@ All list endpoints support pagination with the following query parameters:
 - `sortBy`: Sort field(s) in format `field:asc` or `field:desc` (comma-separated for multiple fields)
 - `sortOrder`: Global sort order (asc/desc) - used when `sortBy` is not specified
 
-Example:
+**Example:**
 ```
 GET /api/v1/groups?page=0&pageSize=10&sortBy=name:asc,createdAt:desc
 ```
 
-### Using the local docker stack
+## API Documentation
+
+Once the API is running, access the interactive Swagger documentation at:
+```
+http://localhost:8080/swagger/index.html
+```
+
+### Updating Swagger Docs
+
+If you change the API annotations, regenerate the Swagger bundle:
+
+**1. Install the CLI (one time):**
+```bash
+go install github.com/swaggo/swag/cmd/swag@v1.16.4
+```
+
+**2. Rebuild the docs:**
+
+**Windows:**
+```cmd
+cd app\api
+%USERPROFILE%\go\bin\swag.exe init -g cmd\main.go -o docs
+```
+
+**Linux/Mac:**
+```bash
+cd app/api
+$(go env GOPATH)/bin/swag init -g cmd/main.go -o docs
+```
+
+Commit the updated `docs/docs.go`, `docs/swagger.json`, and `docs/swagger.yaml` files with your change.
+
+## Using the Local Docker Stack
 
 `docker-compose.local.yaml` spins up MongoDB, Kafka, LocalStack, and a mock OAuth server. After running:
 
-```
-docker compose -f ../docker-compose.local.yaml up -d
+```bash
+docker compose -f ../../docker-compose.local.yaml up -d
 ```
 
-configure `config/config.yaml` to use issuer `http://localhost:8081/default` and JWKS `http://localhost:8081/default/jwks`, then start the API as usual.
-The bundled config already points `storage.mongo.uri` at the Compose Mongo instance (`mongodb://localhost:27017`); update it if you run Mongo elsewhere.
+Configure `config/config.yaml` to use:
+- OAuth issuer: `http://localhost:8081/default`
+- OAuth JWKS: `http://localhost:8081/default/jwks`
+- MongoDB: `mongodb://localhost:27017`
 
+The bundled config already points to the Compose services; update it if you run services elsewhere.

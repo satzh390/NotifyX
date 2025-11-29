@@ -86,11 +86,20 @@ type Template struct {
 	UpdatedAt    time.Time                  `json:"updatedAt" bson:"updatedAt"`
 }
 
+// CustomFilterConfig represents configuration for a custom filter.
+// The Type field must match the name of a registered custom filter (typically the struct type name).
+// Custom filters are applied in addition to the default preferences filter and are NOT applied to direct emails and phone numbers.
+type CustomFilterConfig struct {
+	Type   string                 `json:"type" bson:"type"`     // Filter type/name identifier (must match registered filter name)
+	Config map[string]interface{} `json:"config" bson:"config"` // Filter-specific configuration passed to the filter
+}
+
 type Rule struct {
 	EventType    string                 `json:"eventType" bson:"eventType" immutable:"true"`
 	CustomerID   string                 `json:"customerId" bson:"customerId" immutable:"true"`
 	Channels     []ChannelType          `json:"channels" bson:"channels"`
 	TemplateRefs map[ChannelType]string `json:"templateRefs" bson:"templateRefs"`
+	CustomFilter *CustomFilterConfig    `json:"customFilter,omitempty" bson:"customFilter,omitempty"` // Optional custom filter configuration
 	CreatedAt    time.Time              `json:"createdAt" bson:"createdAt" immutable:"true"`
 	UpdatedAt    time.Time              `json:"updatedAt" bson:"updatedAt"`
 }

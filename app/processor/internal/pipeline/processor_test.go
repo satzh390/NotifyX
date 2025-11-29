@@ -101,7 +101,7 @@ func TestProcessor_HandleMessage_Success(t *testing.T) {
 
 	filter.On("Apply", mock.MatchedBy(func(subs []domain.Subscriber) bool {
 		return len(subs) == 1 && subs[0].ID == "sub-1"
-	}), rule).Return([]filterpkg.FilteredSubscriber{
+	}), rule, mock.Anything).Return([]filterpkg.FilteredSubscriber{
 		{
 			Subscriber: subscriber,
 			Channels:   []domain.ChannelType{domain.ChannelEmail},
@@ -244,7 +244,7 @@ func TestProcessor_HandleMessage_NoEligibleSubscribers(t *testing.T) {
 			_ = visitor(subscriber)
 		}).Return(nil).Once()
 
-	filter.On("Apply", mock.Anything, rule).Return([]filterpkg.FilteredSubscriber{}).Once()
+	filter.On("Apply", mock.Anything, rule, mock.Anything).Return([]filterpkg.FilteredSubscriber{}).Once()
 
 	err := processor.handleMessage(context.Background(), msg)
 
@@ -347,7 +347,7 @@ func TestProcessor_HandleMessage_PublisherError(t *testing.T) {
 			_ = visitor(subscriber)
 		}).Return(nil).Once()
 
-	filter.On("Apply", mock.Anything, rule).Return([]filterpkg.FilteredSubscriber{
+	filter.On("Apply", mock.Anything, rule, mock.Anything).Return([]filterpkg.FilteredSubscriber{
 		{
 			Subscriber: subscriber,
 			Channels:   []domain.ChannelType{domain.ChannelEmail},
