@@ -99,7 +99,13 @@ func (store *fakeSubscriberStore) Get(ctx context.Context, customerID, subscribe
 
 func (store *fakeSubscriberStore) List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.Subscriber], error) {
 	eventType := opts.Filter["subscribedEventTypes"]
-	items := store.listByEvent[eventType]
+	var items []domain.Subscriber
+	if eventType != "" {
+		items = store.listByEvent[eventType]
+	} else {
+		// For broadcast (no eventType filter), return empty or handle differently
+		items = []domain.Subscriber{}
+	}
 	return domain.ListResult[domain.Subscriber]{
 		Items: items,
 		Pagination: domain.PaginationResult{

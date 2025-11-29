@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -31,7 +32,7 @@ func setupTestProcessor() (*Processor, *MockKafkaReader, *MockKafkaWriter, *Mock
 		Cache: resolverpkg.NoopRuleCache{},
 	})
 
-	processor := NewProcessor(Options{
+	processor, err := NewProcessor(Options{
 		Reader:       reader,
 		DLQ:          dlq,
 		Resolver:     resolverMock,
@@ -42,6 +43,9 @@ func setupTestProcessor() (*Processor, *MockKafkaReader, *MockKafkaWriter, *Mock
 			Rules: ruleStore,
 		},
 	})
+	if err != nil {
+		panic(fmt.Sprintf("failed to create processor in test: %v", err))
+	}
 
 	return processor, reader, dlq, resolverMock, publisher, filter, ruleStore
 }
@@ -420,10 +424,115 @@ func TestGetSubscriberIdentifier(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+		for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := getSubscriberIdentifier(tt.subscriber)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestNewProcessor_Validation(t *testing.T) {
+	reader := new(MockKafkaReader)
+	resolverMock := new(MockResolver)
+	publisher := new(MockPublisher)
+	filter := new(MockPreferencesFilter)
+	ruleStore := new(MockRuleStore)
+	ruleResolver := resolverpkg.NewRuleResolver(resolverpkg.Options{
+		Store: ruleStore,
+		Cache: resolverpkg.NoopRuleCache{},
+	})
+
+	tests := []struct {
+		name    string
+		opts    Options
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "missing reader",
+			opts: Options{
+				Reader:       nil,
+				Resolver:     resolverMock,
+				RuleResolver: ruleResolver,
+				Filter:       filter,
+				Fanout:       publisher,
+			},
+			wantErr: true,
+			errMsg:  "Reader",
+		},
+		{
+			name: "missing resolver",
+			opts: Options{
+				Reader:       reader,
+				Resolver:     nil,
+				RuleResolver: ruleResolver,
+				Filter:       filter,
+				Fanout:       publisher,
+			},
+			wantErr: true,
+			errMsg:  "Resolver",
+		},
+		{
+			name: "missing ruleResolver",
+			opts: Options{
+				Reader:       reader,
+				Resolver:     resolverMock,
+				RuleResolver: nil,
+				Filter:       filter,
+				Fanout:       publisher,
+			},
+			wantErr: true,
+			errMsg:  "RuleResolver",
+		},
+		{
+			name: "missing filter",
+			opts: Options{
+				Reader:       reader,
+				Resolver:     resolverMock,
+				RuleResolver: ruleResolver,
+				Filter:       nil,
+				Fanout:       publisher,
+			},
+			wantErr: true,
+			errMsg:  "Filter",
+		},
+		{
+			name: "missing fanout",
+			opts: Options{
+				Reader:       reader,
+				Resolver:     resolverMock,
+				RuleResolver: ruleResolver,
+				Filter:       filter,
+				Fanout:       nil,
+			},
+			wantErr: true,
+			errMsg:  "Fanout",
+		},
+		{
+			name: "all required fields present",
+			opts: Options{
+				Reader:       reader,
+				Resolver:     resolverMock,
+				RuleResolver: ruleResolver,
+				Filter:       filter,
+				Fanout:       publisher,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			proc, err := NewProcessor(tt.opts)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+				assert.Nil(t, proc)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, proc)
+			}
 		})
 	}
 }

@@ -17,7 +17,7 @@ const (
 type Resolver struct {
 	stores   storage.Stores
 	cache    cache.SubscriberCache
-	pageSize int
+	PageSize int // Public field - users can set it directly
 }
 
 func NewResolver(stores storage.Stores, cacheProvider cache.SubscriberCache) *Resolver {
@@ -27,13 +27,7 @@ func NewResolver(stores storage.Stores, cacheProvider cache.SubscriberCache) *Re
 	return &Resolver{
 		stores:   stores,
 		cache:    cacheProvider,
-		pageSize: defaultPageSize,
-	}
-}
-
-func (resolver *Resolver) SetPageSize(size int) {
-	if size > 0 {
-		resolver.pageSize = size
+		PageSize: defaultPageSize,
 	}
 }
 
@@ -123,43 +117,9 @@ func (resolver *Resolver) streamGroups(ctx context.Context, customerID string, g
 }
 
 func (resolver *Resolver) streamBroadcast(ctx context.Context, customerID string, visitor func(domain.Subscriber) error) error {
-	page := 0
-	for {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-
-		list, err := resolver.stores.Subscribers.List(ctx, domain.ListOptions{
-			Pagination: domain.PaginationParams{
-				Page:     page,
-				PageSize: resolver.pageSize,
-			},
-			Filter: map[string]string{
-				"customerId": customerID,
-			},
-		})
-		if err != nil {
-			return fmt.Errorf("recipients: broadcast list: %w", err)
-		}
-
-		if len(list.Items) == 0 {
-			break
-		}
-
-		for _, subscriber := range list.Items {
-			_ = resolver.cache.Set(ctx, subscriber)
-			if err := visitor(subscriber); err != nil {
-				return err
-			}
-		}
-
-		page++
-		if page >= list.Pagination.TotalPages {
-			break
-		}
-	}
-
-	return nil
+	return resolver.streamPaginatedSubscribers(ctx, map[string]string{
+		"customerId": customerID,
+	}, visitor)
 }
 
 func (resolver *Resolver) getSubscriber(ctx context.Context, customerID, subscriberID string) (domain.Subscriber, bool, error) {
@@ -187,8 +147,7 @@ func (resolver *Resolver) streamDirectEmails(ctx context.Context, customerID str
 		if email == "" {
 			continue
 		}
-		subscriber := createDirectEmailSubscriber(customerID, email)
-		if err := visitor(subscriber); err != nil {
+		if err := visitor(createDirectEmailSubscriber(customerID, email)); err != nil {
 			return err
 		}
 	}
@@ -203,8 +162,7 @@ func (resolver *Resolver) streamDirectPhones(ctx context.Context, customerID str
 		if phone == "" {
 			continue
 		}
-		subscriber := createDirectPhoneSubscriber(customerID, phone)
-		if err := visitor(subscriber); err != nil {
+		if err := visitor(createDirectPhoneSubscriber(customerID, phone)); err != nil {
 			return err
 		}
 	}
@@ -212,44 +170,10 @@ func (resolver *Resolver) streamDirectPhones(ctx context.Context, customerID str
 }
 
 func (resolver *Resolver) streamInterestedSubscribers(ctx context.Context, customerID, eventType string, visitor func(domain.Subscriber) error) error {
-	page := 0
-	for {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-
-		list, err := resolver.stores.Subscribers.List(ctx, domain.ListOptions{
-			Pagination: domain.PaginationParams{
-				Page:     page,
-				PageSize: resolver.pageSize,
-			},
-			Filter: map[string]string{
-				"customerId":           customerID,
-				"subscribedEventTypes": eventType,
-			},
-		})
-		if err != nil {
-			return fmt.Errorf("recipients: interested subscribers: %w", err)
-		}
-
-		if len(list.Items) == 0 {
-			break
-		}
-
-		for _, subscriber := range list.Items {
-			_ = resolver.cache.Set(ctx, subscriber)
-			if err := visitor(subscriber); err != nil {
-				return err
-			}
-		}
-
-		page++
-		if page >= list.Pagination.TotalPages {
-			break
-		}
-	}
-
-	return nil
+	return resolver.streamPaginatedSubscribers(ctx, map[string]string{
+		"customerId":           customerID,
+		"subscribedEventTypes": eventType,
+	}, visitor)
 }
 
 func (resolver *Resolver) streamInterestedGroups(ctx context.Context, customerID, eventType string, visitor func(domain.Subscriber) error) error {
@@ -262,7 +186,7 @@ func (resolver *Resolver) streamInterestedGroups(ctx context.Context, customerID
 		list, err := resolver.stores.Groups.List(ctx, domain.ListOptions{
 			Pagination: domain.PaginationParams{
 				Page:     page,
-				PageSize: resolver.pageSize,
+				PageSize: resolver.PageSize,
 			},
 			Filter: map[string]string{
 				"customerId":           customerID,
@@ -288,7 +212,44 @@ func (resolver *Resolver) streamInterestedGroups(ctx context.Context, customerID
 			break
 		}
 	}
+	return nil
+}
 
+// streamPaginatedSubscribers streams subscribers from paginated list results
+func (resolver *Resolver) streamPaginatedSubscribers(ctx context.Context, filter map[string]string, visitor func(domain.Subscriber) error) error {
+	page := 0
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		list, err := resolver.stores.Subscribers.List(ctx, domain.ListOptions{
+			Pagination: domain.PaginationParams{
+				Page:     page,
+				PageSize: resolver.PageSize,
+			},
+			Filter: filter,
+		})
+		if err != nil {
+			return fmt.Errorf("recipients: subscriber list: %w", err)
+		}
+
+		if len(list.Items) == 0 {
+			break
+		}
+
+		for _, subscriber := range list.Items {
+			_ = resolver.cache.Set(ctx, subscriber)
+			if err := visitor(subscriber); err != nil {
+				return err
+			}
+		}
+
+		page++
+		if page >= list.Pagination.TotalPages {
+			break
+		}
+	}
 	return nil
 }
 
