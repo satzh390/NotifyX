@@ -115,7 +115,7 @@ func main() {
 	filterRegistry := filter.DefaultFilterRegistry
 	compositeFilter := filter.NewCompositeFilter(preferencesFilter, filterRegistry)
 
-	proc := pipeline.NewProcessor(pipeline.Options{
+	proc, err := pipeline.NewProcessor(pipeline.Options{
 		Reader:       reader,
 		DLQ:          dlqWriter,
 		Resolver:     recipients.NewResolver(stores, subCache),
@@ -125,6 +125,10 @@ func main() {
 		Stores:       stores,
 		Logger:       logger,
 	})
+	if err != nil {
+		logger.Error("failed to create processor", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 
 	logger.Info("processor started",
 		slog.String("topic", cfg.Kafka.InputTopic),

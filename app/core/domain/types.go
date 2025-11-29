@@ -114,11 +114,11 @@ type Event struct {
 }
 
 type Recipients struct {
-	SubscriberIDs []string `json:"subscriberIds" bson:"subscriberIds"`
-	Groups        []string `json:"groups" bson:"groups"`
+	SubscriberIDs []string `json:"subscriberIds" bson:"subscriberIds" validate:"max=5000"`
+	Groups        []string `json:"groups" bson:"groups" validate:"max=100"`
 	Broadcast     bool     `json:"broadcast" bson:"broadcast"`
-	DirectEmails  []string `json:"directEmails,omitempty" bson:"directEmails,omitempty"`
-	DirectPhones  []string `json:"directPhones,omitempty" bson:"directPhones,omitempty"`
+	DirectEmails  []string `json:"directEmails,omitempty" bson:"directEmails,omitempty" validate:"max=5000"`
+	DirectPhones  []string `json:"directPhones,omitempty" bson:"directPhones,omitempty" validate:"max=5000"`
 }
 
 type DeliveryTask struct {

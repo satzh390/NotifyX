@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/segmentio/kafka-go"
 
 	"github.com/notifyx/core/domain"
@@ -52,21 +53,32 @@ type Processor struct {
 }
 
 type Options struct {
-	Reader       KafkaReader
-	DLQ          KafkaWriter
-	Resolver     RecipientResolver
-	RuleResolver *resolver.RuleResolver
-	Filter       SubscriberFilter
-	Fanout       fanout.Publisher
-	Stores       storage.Stores
-	Logger       *slog.Logger
+	Reader       KafkaReader            `validate:"required"`
+	DLQ          KafkaWriter            // Optional
+	Resolver     RecipientResolver      `validate:"required"`
+	RuleResolver *resolver.RuleResolver `validate:"required"`
+	Filter       SubscriberFilter       `validate:"required"`
+	Fanout       fanout.Publisher       `validate:"required"`
+	Stores       storage.Stores         // Optional
+	Logger       *slog.Logger           // Optional, defaults to slog.Default()
 }
 
-func NewProcessor(opts Options) *Processor {
+var validate *validator.Validate
+
+func init() {
+	validate = validator.New()
+}
+
+func NewProcessor(opts Options) (*Processor, error) {
+	if err := validate.Struct(opts); err != nil {
+		return nil, fmt.Errorf("processor: invalid options: %w", err)
+	}
+
 	logger := opts.Logger
 	if logger == nil {
 		logger = slog.Default()
 	}
+
 	return &Processor{
 		reader:       opts.Reader,
 		dlq:          opts.DLQ,
@@ -76,7 +88,7 @@ func NewProcessor(opts Options) *Processor {
 		fanout:       opts.Fanout,
 		stores:       opts.Stores,
 		logger:       logger,
-	}
+	}, nil
 }
 
 const (
@@ -113,17 +125,13 @@ func (processor *Processor) handleMessage(ctx context.Context, msg kafka.Message
 	}
 
 	// Use RuleResolver to get merged rule (global + customer override)
-	if processor.ruleResolver == nil {
-		return fmt.Errorf("rule resolver is not set")
-	}
-
 	rule, err := processor.ruleResolver.Resolve(ctx, env.CustomerID, env.Type)
 	if err != nil {
 		return fmt.Errorf("rule lookup: %w", err)
 	}
 
 	recipients := env.Recipients
-	if err := validateRecipientLimits(recipients); err != nil {
+	if err := validate.Struct(recipients); err != nil {
 		return fmt.Errorf("recipient limits: %w", err)
 	}
 
@@ -197,22 +205,6 @@ func (processor *Processor) publishDLQ(ctx context.Context, msg kafka.Message, p
 		Key:   msg.Key,
 		Value: body,
 	})
-}
-
-func validateRecipientLimits(recipients domain.Recipients) error {
-	if len(recipients.SubscriberIDs) > event.MaxSubscriberIDs {
-		return fmt.Errorf("subscriberIds exceeds maximum of %d", event.MaxSubscriberIDs)
-	}
-	if len(recipients.Groups) > event.MaxGroups {
-		return fmt.Errorf("groups exceeds maximum of %d", event.MaxGroups)
-	}
-	if len(recipients.DirectEmails) > event.MaxDirectEmails {
-		return fmt.Errorf("directEmails exceeds maximum of %d", event.MaxDirectEmails)
-	}
-	if len(recipients.DirectPhones) > event.MaxDirectPhones {
-		return fmt.Errorf("directPhones exceeds maximum of %d", event.MaxDirectPhones)
-	}
-	return nil
 }
 
 func (processor *Processor) processChunk(ctx context.Context, subscribers []domain.Subscriber, rule domain.Rule, env event.CloudEventEnvelope[map[string]any], customerID string) (int, error) {
