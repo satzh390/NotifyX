@@ -36,7 +36,7 @@ type (
 	}
 
 	SubscriberFilter interface {
-		Apply(subscribers []domain.Subscriber, rule domain.Rule) []filter.FilteredSubscriber
+		Apply(subscribers []domain.Subscriber, rule domain.Rule, message map[string]interface{}) []filter.FilteredSubscriber
 	}
 )
 
@@ -216,7 +216,12 @@ func validateRecipientLimits(recipients domain.Recipients) error {
 }
 
 func (processor *Processor) processChunk(ctx context.Context, subscribers []domain.Subscriber, rule domain.Rule, env event.CloudEventEnvelope[map[string]any], customerID string) (int, error) {
-	filtered := processor.filters.Apply(subscribers, rule)
+	// Pass the event payload as the message for custom filters
+	message := env.Payload
+	if message == nil {
+		message = make(map[string]interface{})
+	}
+	filtered := processor.filters.Apply(subscribers, rule, message)
 	if len(filtered) == 0 {
 		return 0, nil
 	}

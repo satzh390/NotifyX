@@ -75,8 +75,8 @@ type MockPreferencesFilter struct {
 	mock.Mock
 }
 
-func (mockPreferencesFilter *MockPreferencesFilter) Apply(subscribers []domain.Subscriber, rule domain.Rule) []filter.FilteredSubscriber {
-	args := mockPreferencesFilter.Called(subscribers, rule)
+func (mockPreferencesFilter *MockPreferencesFilter) Apply(subscribers []domain.Subscriber, rule domain.Rule, message map[string]interface{}) []filter.FilteredSubscriber {
+	args := mockPreferencesFilter.Called(subscribers, rule, message)
 	return args.Get(0).([]filter.FilteredSubscriber)
 }
 
