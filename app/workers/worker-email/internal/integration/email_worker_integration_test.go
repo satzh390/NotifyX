@@ -29,15 +29,8 @@ func setupEmailWorkerIntegration(t *testing.T) (*worker.EmailWorker, func(), pro
 	})
 	require.NoError(t, err)
 
-	// Create SMTP provider pointing to MailHog
-	smtpProvider, err := provider.NewSMTPProvider(provider.SMTPConfig{
-		Host:     "localhost",
-		Port:     "1025",
-		Username: "", // MailHog doesn't require auth
-		Password: "",
-		From:     "test@notifyx.local",
-	})
-	require.NoError(t, err)
+	// Use simple mock provider for testing (no external SMTP server required)
+	emailProvider := provider.NewMockEmailProvider()
 
 	// Create base worker
 	baseWorker := workerlib.NewBaseWorker(workerlib.BaseWorkerOptions{
@@ -48,13 +41,13 @@ func setupEmailWorkerIntegration(t *testing.T) (*worker.EmailWorker, func(), pro
 	})
 
 	// Create Email worker
-	emailWorker := worker.NewEmailWorker(baseWorker, smtpProvider)
+	emailWorker := worker.NewEmailWorker(baseWorker, emailProvider)
 
 	return emailWorker, func() {
 		if cleanup != nil {
 			_ = cleanup(ctx)
 		}
-	}, smtpProvider
+	}, emailProvider
 }
 
 func TestEmailWorker_Integration(t *testing.T) {
@@ -101,7 +94,7 @@ func TestEmailWorker_Integration(t *testing.T) {
 			CreatedAt: time.Now(),
 		}
 
-		// Process the task - should succeed with MailHog SMTP
+		// Process the task - should succeed with mock provider
 		err = emailWorker.ProcessTask(ctx, task)
 		assert.NoError(t, err)
 	})
@@ -154,7 +147,7 @@ func TestEmailWorker_Integration(t *testing.T) {
 			CreatedAt: time.Now(),
 		}
 
-		// Process the task - should succeed with MailHog SMTP
+		// Process the task - should succeed with mock provider
 		err = emailWorker.ProcessTask(ctx, task)
 		assert.NoError(t, err)
 	})

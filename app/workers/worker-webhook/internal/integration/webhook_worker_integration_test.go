@@ -29,10 +29,8 @@ func setupWebhookWorkerIntegration(t *testing.T) (*worker.WebhookWorker, func(),
 	})
 	require.NoError(t, err)
 
-	// Create HTTP provider pointing to webhook-receiver service
-	webhookProvider := provider.NewHTTPProvider(provider.HTTPConfig{
-		Timeout: 10 * time.Second,
-	})
+	// Use simple mock provider for testing (no external webhook receiver required)
+	webhookProvider := provider.NewMockWebhookProvider()
 
 	// Create base worker
 	baseWorker := workerlib.NewBaseWorker(workerlib.BaseWorkerOptions{
@@ -100,7 +98,7 @@ func TestWebhookWorker_Integration(t *testing.T) {
 			CreatedAt: time.Now(),
 		}
 
-		// Process the task - should succeed with HTTP provider to webhook-receiver
+		// Process the task - should succeed with mock provider
 		err = webhookWorker.ProcessTask(ctx, task)
 		assert.NoError(t, err)
 	})
@@ -157,7 +155,7 @@ func TestWebhookWorker_Integration(t *testing.T) {
 			CreatedAt: time.Now(),
 		}
 
-		// Process the task - should succeed with HTTP provider to webhook-receiver
+		// Process the task - should succeed with mock provider
 		err = webhookWorker.ProcessTask(ctx, task)
 		assert.NoError(t, err)
 	})

@@ -29,14 +29,8 @@ func setupSMSWorkerIntegration(t *testing.T) (*worker.SMSWorker, func(), provide
 	})
 	require.NoError(t, err)
 
-	// Create SNS provider with LocalStack endpoint
-	snsProvider, err := provider.NewSNSProvider(provider.SNSConfig{
-		Region:    "us-east-1",
-		AccessKey: "test",
-		SecretKey: "test",
-		Endpoint:  "http://localhost:4566", // LocalStack endpoint
-	})
-	require.NoError(t, err)
+	// Use simple mock provider for testing (no external SNS/LocalStack required)
+	smsProvider := provider.NewMockSMSProvider()
 
 	// Create base worker
 	baseWorker := workerlib.NewBaseWorker(workerlib.BaseWorkerOptions{
@@ -47,13 +41,13 @@ func setupSMSWorkerIntegration(t *testing.T) (*worker.SMSWorker, func(), provide
 	})
 
 	// Create SMS worker
-	smsWorker := worker.NewSMSWorker(baseWorker, snsProvider)
+	smsWorker := worker.NewSMSWorker(baseWorker, smsProvider)
 
 	return smsWorker, func() {
 		if cleanup != nil {
 			_ = cleanup(ctx)
 		}
-	}, snsProvider
+	}, smsProvider
 }
 
 func TestSMSWorker_Integration(t *testing.T) {
@@ -99,7 +93,7 @@ func TestSMSWorker_Integration(t *testing.T) {
 			CreatedAt: time.Now(),
 		}
 
-		// Process the task - should succeed with LocalStack SNS
+		// Process the task - should succeed with mock provider
 		err = smsWorker.ProcessTask(ctx, task)
 		assert.NoError(t, err)
 	})
@@ -150,7 +144,7 @@ func TestSMSWorker_Integration(t *testing.T) {
 			CreatedAt: time.Now(),
 		}
 
-		// Process the task - should succeed with LocalStack SNS
+		// Process the task - should succeed with mock provider
 		err = smsWorker.ProcessTask(ctx, task)
 		assert.NoError(t, err)
 	})
