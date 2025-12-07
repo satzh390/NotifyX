@@ -1,0 +1,36 @@
+[
+  {
+    "httpRequest": {
+      "method": "POST",
+      "path": "/v1/projects/.*/messages:send"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "body": "{\"name\": \"projects/test/messages/mock-id\"}",
+      "headers": {
+        "Content-Type": ["application/json"]
+      }
+    },
+    "times": {
+      "unlimited": true
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "POST",
+      "path": "/3/device/.*"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "apns-id": ["mock-apns-id"],
+        "Content-Type": ["application/json"]
+      },
+      "body": "{}"
+    },
+    "times": {
+      "unlimited": true
+    }
+  }
+]
+

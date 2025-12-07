@@ -19,7 +19,7 @@ func GetTemplate(
 	if err != nil {
 		return nil, fmt.Errorf("get template: %w", err)
 	}
-	return tpl, nil
+	return &tpl, nil
 }
 
 // GetLocalizedContent returns the appropriate template content based on language preference
