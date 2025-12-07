@@ -11,9 +11,9 @@ env:
 
 jobs:
   test:
-    name: Test
+    name: Test All Projects
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     
     services:
       mongodb:
@@ -57,10 +57,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Run unit tests - API
-        working-directory: app/api
-        run: go test ./... -v -timeout 5m
-
+      # Unit Tests - Core modules first (dependencies for others)
       - name: Run unit tests - Core
         working-directory: app/core
         run: go test ./... -v -timeout 5m
@@ -69,9 +66,42 @@ jobs:
         working-directory: app/httpx
         run: go test ./... -v -timeout 5m
 
+      - name: Run unit tests - WorkerX
+        working-directory: app/workerx
+        run: go test ./... -v -timeout 5m
+
       - name: Run unit tests - Processor
         working-directory: app/processor
         run: go test ./... -v -timeout 5m
+
+      - name: Run unit tests - API
+        working-directory: app/api
+        run: go test ./... -v -timeout 5m
+
+      # Unit Tests - Workers
+      - name: Run unit tests - Worker Email
+        working-directory: app/workers/worker-email
+        run: go test ./... -v -timeout 5m
+
+      - name: Run unit tests - Worker SMS
+        working-directory: app/workers/worker-sms
+        run: go test ./... -v -timeout 5m
+
+      - name: Run unit tests - Worker Push
+        working-directory: app/workers/worker-push
+        run: go test ./... -v -timeout 5m
+
+      - name: Run unit tests - Worker Webhook
+        working-directory: app/workers/worker-webhook
+        run: go test ./... -v -timeout 5m
+
+      # Integration Tests
+      - name: Run integration tests - Core
+        working-directory: app/core
+        env:
+          MONGODB_URI: mongodb://localhost:27017
+          REDIS_ADDR: localhost:6379
+        run: go test -tags=integration ./... -v -timeout 10m
 
       - name: Run integration tests - API
         working-directory: app/api
@@ -80,29 +110,150 @@ jobs:
           REDIS_ADDR: localhost:6379
         run: go test -tags=integration ./... -v -timeout 10m
 
-      - name: Run integration tests - Core
-        working-directory: app/core
+      - name: Run integration tests - Worker Email
+        working-directory: app/workers/worker-email
         env:
           MONGODB_URI: mongodb://localhost:27017
-          REDIS_ADDR: localhost:6379
+        run: go test -tags=integration ./... -v -timeout 10m
+
+      - name: Run integration tests - Worker SMS
+        working-directory: app/workers/worker-sms
+        env:
+          MONGODB_URI: mongodb://localhost:27017
+        run: go test -tags=integration ./... -v -timeout 10m
+
+      - name: Run integration tests - Worker Push
+        working-directory: app/workers/worker-push
+        env:
+          MONGODB_URI: mongodb://localhost:27017
+        run: go test -tags=integration ./... -v -timeout 10m
+
+      - name: Run integration tests - Worker Webhook
+        working-directory: app/workers/worker-webhook
+        env:
+          MONGODB_URI: mongodb://localhost:27017
         run: go test -tags=integration ./... -v -timeout 10m
 
   build:
-    name: Build
+    name: Build All Projects
     runs-on: ubuntu-latest
     needs: test
-    timeout-minutes: 15
+    timeout-minutes: 30
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Create artifacts directory
+      - name: Create artifacts directory
+        run: mkdir -p artifacts
+
+      # Build binaries
+      - name: Build API binary
+        run: |
+          cd app/api
+          go mod download
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../artifacts/notifyx-api ./cmd/main.go
+
+      - name: Build Processor binary
+        run: |
+          cd app/processor
+          go mod download
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../artifacts/notifyx-processor ./cmd/main.go
+
+      - name: Build Worker Email binary
+        run: |
+          cd app/workers/worker-email
+          go mod download
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../../artifacts/worker-email ./cmd/main.go
+
+      - name: Build Worker SMS binary
+        run: |
+          cd app/workers/worker-sms
+          go mod download
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../../artifacts/worker-sms ./cmd/main.go
+
+      - name: Build Worker Push binary
+        run: |
+          cd app/workers/worker-push
+          go mod download
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../../artifacts/worker-push ./cmd/main.go
+
+      - name: Build Worker Webhook binary
+        run: |
+          cd app/workers/worker-webhook
+          go mod download
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../../artifacts/worker-webhook ./cmd/main.go
+
+      # Build Docker images
       - name: Build API Docker image
         run: docker build -f app/api/Dockerfile -t notifyx-api:ci .
 
       - name: Build Processor Docker image
         run: docker build -f app/processor/Dockerfile -t notifyx-processor:ci .
 
+      - name: Build Worker Email Docker image
+        run: docker build -f app/workers/worker-email/Dockerfile -t notifyx-worker-email:ci .
+
+      - name: Build Worker SMS Docker image
+        run: docker build -f app/workers/worker-sms/Dockerfile -t notifyx-worker-sms:ci .
+
+      - name: Build Worker Push Docker image
+        run: docker build -f app/workers/worker-push/Dockerfile -t notifyx-worker-push:ci .
+
+      - name: Build Worker Webhook Docker image
+        run: docker build -f app/workers/worker-webhook/Dockerfile -t notifyx-worker-webhook:ci .
+
+      # Save Docker images as artifacts
+      - name: Save API Docker image
+        run: docker save notifyx-api:ci | gzip > artifacts/notifyx-api.tar.gz
+
+      - name: Save Processor Docker image
+        run: docker save notifyx-processor:ci | gzip > artifacts/notifyx-processor.tar.gz
+
+      - name: Save Worker Email Docker image
+        run: docker save notifyx-worker-email:ci | gzip > artifacts/notifyx-worker-email.tar.gz
+
+      - name: Save Worker SMS Docker image
+        run: docker save notifyx-worker-sms:ci | gzip > artifacts/notifyx-worker-sms.tar.gz
+
+      - name: Save Worker Push Docker image
+        run: docker save notifyx-worker-push:ci | gzip > artifacts/notifyx-worker-push.tar.gz
+
+      - name: Save Worker Webhook Docker image
+        run: docker save notifyx-worker-webhook:ci | gzip > artifacts/notifyx-worker-webhook.tar.gz
+
+      # Upload artifacts
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: artifacts/
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Upload Docker images
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-images
+          path: artifacts/*.tar.gz
+          retention-days: 7
+          if-no-files-found: warn

@@ -1,0 +1,65 @@
+{{- range $worker, $config := .Values.workers }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "notifyx.fullname" $ }}-worker-{{ $worker }}-config
+  labels:
+    {{- include "notifyx.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: worker-{{ $worker }}
+data:
+  config.yaml: |
+    base:
+      kafka:
+        brokers:
+          {{- range $.Values.infrastructure.kafka.brokers }}
+          - "{{ . }}"
+          {{- end }}
+        topic: "notifyx-worker-{{ $worker }}"
+        groupId: "notifyx-worker-{{ $worker }}"
+        dlqTopic: "notifyx-worker-{{ $worker }}-dlq"
+      
+      storage:
+        mongo:
+          uri: "mongodb://{{ $.Values.infrastructure.mongo.host }}:{{ $.Values.infrastructure.mongo.port }}"
+          database: "notifyx"
+          collectionPrefix: ""
+      
+      delivery:
+        mode: "mongo"
+        mongo:
+          enabled: true
+        broker:
+          enabled: false
+    {{- if eq $worker "email" }}
+    email:
+      provider:
+        type: "smtp"
+        smtp:
+          host: "mailhog"
+          port: "1025"
+          username: ""
+          password: ""
+          from: "notifyx@example.com"
+    {{- else if eq $worker "sms" }}
+    sms:
+      provider:
+        type: "sns"
+        sns:
+          region: "us-east-1"
+          accessKey: ""
+          secretKey: ""
+          endpoint: "http://localstack:4566"
+    {{- else if eq $worker "push" }}
+    push:
+      provider:
+        type: "mock"
+    {{- else if eq $worker "webhook" }}
+    webhook:
+      provider:
+        type: "http"
+        http:
+          timeout: "30s"
+    {{- end }}
+{{- end }}
+

@@ -1,0 +1,100 @@
+version: "3.9"
+
+networks:
+  notifyx-net:
+    driver: bridge
+  infra-net:
+    name: notifyx-infra-net
+    driver: bridge
+    external: true
+    # Note: This network should be created by docker-compose.local.yaml
+    # If it doesn't exist, run: docker network create notifyx-infra-net
+
+services:
+  api:
+    image: notifyx-api:latest
+    container_name: notifyx-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - NOTIFYX_API_CONFIG=/app/config.yaml
+    networks:
+      - notifyx-net
+      - infra-net
+    # Note: Infrastructure services (mongo, oauth) should be running
+    # in the notifyx-infra-net network from docker-compose.local.yaml
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  processor:
+    image: notifyx-processor:latest
+    container_name: notifyx-processor
+    restart: unless-stopped
+    environment:
+      - NOTIFYX_PROCESSOR_CONFIG=/app/config.yaml
+    networks:
+      - notifyx-net
+      - infra-net
+    # Note: Infrastructure services should be running in notifyx-infra-net network
+    healthcheck:
+      test: ["CMD", "ps", "aux", "|", "grep", "notifyx-processor"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker-email:
+    image: notifyx-worker-email:latest
+    container_name: notifyx-worker-email
+    restart: unless-stopped
+    environment:
+      - NOTIFYX_WORKER_EMAIL_CONFIG=/app/config.yaml
+    networks:
+      - notifyx-net
+      - infra-net
+    # Note: Infrastructure services should be running in notifyx-infra-net network
+    deploy:
+      replicas: 1
+
+  worker-sms:
+    image: notifyx-worker-sms:latest
+    container_name: notifyx-worker-sms
+    restart: unless-stopped
+    environment:
+      - NOTIFYX_WORKER_SMS_CONFIG=/app/config.yaml
+    networks:
+      - notifyx-net
+      - infra-net
+    # Note: Infrastructure services should be running in notifyx-infra-net network
+    deploy:
+      replicas: 1
+
+  worker-push:
+    image: notifyx-worker-push:latest
+    container_name: notifyx-worker-push
+    restart: unless-stopped
+    environment:
+      - NOTIFYX_WORKER_PUSH_CONFIG=/app/config.yaml
+    networks:
+      - notifyx-net
+      - infra-net
+    # Note: Infrastructure services should be running in notifyx-infra-net network
+    deploy:
+      replicas: 1
+
+  worker-webhook:
+    image: notifyx-worker-webhook:latest
+    container_name: notifyx-worker-webhook
+    restart: unless-stopped
+    environment:
+      - NOTIFYX_WORKER_WEBHOOK_CONFIG=/app/config.yaml
+    networks:
+      - notifyx-net
+      - infra-net
+    # Note: Infrastructure services should be running in notifyx-infra-net network
+    deploy:
+      replicas: 1
+

@@ -51,11 +51,25 @@ type CustomerStore interface {
 	Delete(ctx context.Context, customerID string) error
 }
 
+type DeliveryTaskStore interface {
+	Put(ctx context.Context, task domain.DeliveryTask) error
+	Get(ctx context.Context, taskID string) (domain.DeliveryTask, error)
+	List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.DeliveryTask], error)
+}
+
+type DeliveryLogStore interface {
+	Put(ctx context.Context, log domain.DeliveryLog) error
+	Get(ctx context.Context, taskID string) (domain.DeliveryLog, error)
+	List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.DeliveryLog], error)
+}
+
 type Stores struct {
-	Subscribers   SubscriberStore
-	Groups        GroupStore
-	Rules         RuleStore
-	Templates     TemplateStore
-	Organizations OrganizationStore
-	Customers     CustomerStore
+	Subscribers    SubscriberStore
+	Groups         GroupStore
+	Rules          RuleStore
+	Templates      TemplateStore
+	Organizations  OrganizationStore
+	Customers      CustomerStore
+	DeliveryTasks  DeliveryTaskStore
+	DeliveryLogs   DeliveryLogStore
 }

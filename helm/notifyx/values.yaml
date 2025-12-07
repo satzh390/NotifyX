@@ -1,0 +1,135 @@
+# Default values for notifyx
+# This is a YAML-formatted file.
+
+imageRegistry: docker.io
+imagePullPolicy: IfNotPresent
+
+# API Configuration
+api:
+  image:
+    repository: notifyx/notifyx-api
+    tag: "latest"
+  replicaCount: 2
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  config:
+    httpAddr: ":8080"
+    oauthIssuer: "http://oauth-service:8081/default"
+    oauthJwks: "http://oauth-service:8081/default/jwks"
+    mongoURI: "mongodb://mongo:27017"
+    mongoDatabase: "notifyx"
+
+# Processor Configuration
+processor:
+  image:
+    repository: notifyx/notifyx-processor
+    tag: "latest"
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  config:
+    kafkaBrokers:
+      - "kafka:9092"
+    kafkaGroupId: "notifyx-processor"
+    kafkaInputTopic: "notifyx-events"
+    kafkaDLQTopic: "notifyx-events-dlq"
+    mongoURI: "mongodb://mongo:27017"
+    mongoDatabase: "notifyx"
+    redisAddr: "redis:6379"
+    workerTopics:
+      email: "notifyx-worker-email"
+      sms: "notifyx-worker-sms"
+      push: "notifyx-worker-push"
+      webhook: "notifyx-worker-webhook"
+
+# Workers Configuration
+workers:
+  email:
+    image:
+      repository: notifyx/notifyx-worker-email
+      tag: "latest"
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+  
+  sms:
+    image:
+      repository: notifyx/notifyx-worker-sms
+      tag: "latest"
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+  
+  push:
+    image:
+      repository: notifyx/notifyx-worker-push
+      tag: "latest"
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+  
+  webhook:
+    image:
+      repository: notifyx/notifyx-worker-webhook
+      tag: "latest"
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+# Infrastructure dependencies (external)
+infrastructure:
+  mongo:
+    host: "mongo"
+    port: 27017
+  kafka:
+    brokers:
+      - "kafka:9092"
+  redis:
+    host: "redis"
+    port: 6379
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: notifyx.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+

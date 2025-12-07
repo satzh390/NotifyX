@@ -1,0 +1,36 @@
+kafka:
+  brokers:
+    - "localhost:9092"
+  groupId: "notifyx-worker-email"
+  topic: "notifyx-worker-email"
+  dlqTopic: "notifyx-worker-email-dlq"
+  minBytes: 10000
+  maxBytes: 1000000
+  maxWait: "1s"
+  commitInterval: "5s"
+
+storage:
+  mongo:
+    uri: "mongodb://localhost:27017"
+    database: "notifyx"
+    collectionPrefix: ""
+
+delivery:
+  mode: "mongo" # "mongo", "broker", "both", or "none"
+  mongo:
+    enabled: true
+  broker:
+    enabled: false
+    taskTopic: "notifyx-delivery-tasks"
+    logTopic: "notifyx-delivery-logs"
+
+email:
+  provider:
+    type: "smtp"
+    smtp:
+      host: "smtp.gmail.com"
+      port: "587"
+      username: ""
+      password: ""
+      from: ""
+

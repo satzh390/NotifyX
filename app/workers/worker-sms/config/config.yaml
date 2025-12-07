@@ -1,0 +1,34 @@
+kafka:
+  brokers:
+    - "localhost:9092"
+  groupId: "notifyx-worker-sms"
+  topic: "notifyx-worker-sms"
+  dlqTopic: "notifyx-worker-sms-dlq"
+  minBytes: 10000
+  maxBytes: 1000000
+  maxWait: "1s"
+  commitInterval: "5s"
+
+storage:
+  mongo:
+    uri: "mongodb://localhost:27017"
+    database: "notifyx"
+    collectionPrefix: ""
+
+delivery:
+  mode: "mongo" # "mongo", "broker", "both", or "none"
+  mongo:
+    enabled: true
+  broker:
+    enabled: false
+    taskTopic: "notifyx-delivery-tasks"
+    logTopic: "notifyx-delivery-logs"
+
+sms:
+  provider:
+    type: "sns"
+    sns:
+      region: "us-east-1"
+      accessKey: "" # Optional, uses default credentials if empty
+      secretKey: "" # Optional, uses default credentials if empty
+

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "notifyx.fullname" . }}-processor
+  labels:
+    {{- include "notifyx.labels" . | nindent 4 }}
+    app.kubernetes.io/component: processor
+spec:
+  replicas: {{ .Values.processor.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "notifyx.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: processor
+  template:
+    metadata:
+      labels:
+        {{- include "notifyx.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: processor
+    spec:
+      containers:
+      - name: processor
+        image: "{{ .Values.imageRegistry }}/{{ .Values.processor.image.repository }}:{{ .Values.processor.image.tag }}"
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        env:
+        - name: NOTIFYX_PROCESSOR_CONFIG
+          value: "/app/config.yaml"
+        resources:
+          {{- toYaml .Values.processor.resources | nindent 10 }}
+        volumeMounts:
+        - name: config
+          mountPath: /app/config.yaml
+          subPath: config.yaml
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "notifyx.fullname" . }}-processor-config
+

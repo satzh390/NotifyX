@@ -47,7 +47,7 @@ func TestSubscriberHandler_Create(t *testing.T) {
 	})).Return(nil).Once()
 
 	// Mock Get to return the created subscriber (handler calls Get after Put)
-	store.On("Get", mock.Anything, "test-customer", mock.AnythingOfType("string")).Return(func(ctx context.Context, orgID string, id string) domain.Subscriber {
+	store.On("Get", mock.Anything, "test-customer", mock.AnythingOfType("string")).Return(func(ctx context.Context, customerID string, id string) domain.Subscriber {
 		return domain.Subscriber{
 			ID:    id,
 			CustomerID: "test-customer",
