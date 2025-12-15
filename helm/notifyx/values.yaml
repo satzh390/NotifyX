@@ -95,6 +95,20 @@ workers:
       limits:
         cpu: 200m
         memory: 256Mi
+    # Push providers are now configured via AppConfig API (multi-app support)
+    # Each app can have its own provider configuration (APNS, Firebase, etc.)
+    # See: /api/v1/app-configs endpoints for managing app configurations
+    # 
+    # Secrets section: Optional - for mounting shared APNS keys
+    # Note: For per-app keys, configure keyPath in AppConfig to point to mounted secrets
+    # or use external secret managers (AWS Secrets Manager, etc.)
+    secrets:
+      enabled: false  # Set to true to enable secret mounting for shared APNS keys
+      # APNS Key - base64 encoded .p8 file content
+      # Create secret: kubectl create secret generic notifyx-worker-push-apns-secret --from-file=apns-key.p8=/path/to/AuthKey_XXXXXXXXXX.p8
+      apnsKey: ""  # Base64 encoded key content (if using Helm values)
+      # For per-app keys: Mount multiple secrets or use external secret manager
+      # In AppConfig, set apns.keyPath to the mounted secret path (e.g., "/etc/secrets/apns/app1-key.p8")
   
   webhook:
     image:

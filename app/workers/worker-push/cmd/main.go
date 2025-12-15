@@ -12,10 +12,10 @@ import (
 
 	mongoStore "github.com/notifyx/core/adapters/mongo"
 	"github.com/notifyx/core/domain"
-	"github.com/notifyx/workerx/delivery"
 	"github.com/notifyx/worker-push/config"
 	"github.com/notifyx/worker-push/internal/provider"
 	"github.com/notifyx/worker-push/internal/worker"
+	"github.com/notifyx/workerx/delivery"
 	workerlib "github.com/notifyx/workerx/worker"
 )
 
@@ -95,41 +95,14 @@ func main() {
 		resultHandler = delivery.NewCompositeResultHandler(handlers...)
 	}
 
-	// Initialize Push provider
-	var pushProvider provider.Provider
-	switch cfg.Push.Provider.Type {
-	case "firebase":
-		fbProvider, err := provider.NewFirebaseProvider(ctx, provider.FirebaseConfig{
-			ProjectID:  cfg.Push.Provider.Firebase.ProjectID,
-			Credential: cfg.Push.Provider.Firebase.Credential,
-		})
-		if err != nil {
-			logger.Error("failed to create Firebase provider", slog.String("error", err.Error()))
-			os.Exit(1)
-		}
-		pushProvider = fbProvider
-		logger.Info("using Firebase push provider", slog.String("projectId", cfg.Push.Provider.Firebase.ProjectID))
-	case "apns":
-		apnsProvider, err := provider.NewAPNSProvider(ctx, provider.APNSConfig{
-			KeyID:      cfg.Push.Provider.APNS.KeyID,
-			TeamID:     cfg.Push.Provider.APNS.TeamID,
-			BundleID:   cfg.Push.Provider.APNS.BundleID,
-			KeyPath:    cfg.Push.Provider.APNS.KeyPath,
-			Production: cfg.Push.Provider.APNS.Production,
-		})
-		if err != nil {
-			logger.Error("failed to create APNS provider", slog.String("error", err.Error()))
-			os.Exit(1)
-		}
-		pushProvider = apnsProvider
-		logger.Info("using APNS push provider", slog.String("bundleId", cfg.Push.Provider.APNS.BundleID))
-	case "mock":
-		pushProvider = provider.NewMockPushProvider()
-		logger.Info("using mock push provider")
-	default:
-		logger.Error("unsupported push provider type", slog.String("type", cfg.Push.Provider.Type))
-		os.Exit(1)
-	}
+	// Initialize Push ProviderManager (manages multiple providers per app)
+	// Providers are loaded dynamically from AppConfig store based on appId in task metadata
+	providerManager := provider.NewProviderManager(
+		stores.AppConfigs,
+		stores.Customers,
+		logger,
+	)
+	logger.Info("push worker: using ProviderManager for multi-app support")
 
 	// Create base worker
 	baseWorker := workerlib.NewBaseWorker(workerlib.BaseWorkerOptions{
@@ -142,12 +115,13 @@ func main() {
 	})
 
 	// Create Push worker
-	pushWorker := worker.NewPushWorker(baseWorker, pushProvider)
+	pushWorker := worker.NewPushWorker(baseWorker, providerManager)
 
 	defer func() {
 		timeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = pushWorker.Close()
+		_ = providerManager.Close()
 		if resultHandler != nil {
 			_ = resultHandler.Close(timeout)
 		}
@@ -165,4 +139,3 @@ func main() {
 
 	logger.Info("Push worker exited cleanly")
 }
-

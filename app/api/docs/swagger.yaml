@@ -92,6 +92,10 @@ definitions:
         type: string
       eventType:
         type: string
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
       orgId:
         type: string
       templateRefs:
@@ -123,10 +127,66 @@ definitions:
         $ref: '#/definitions/domain.SubscriberPrefs'
       pushToken:
         type: string
+      pushTokens:
+        additionalProperties:
+          type: string
+        type: object
       subscriberId:
         type: string
       webhookUrl:
         type: string
+    type: object
+  domain.AppConfig:
+    properties:
+      apns:
+        $ref: '#/definitions/domain.APNSConfig'
+      createdAt:
+        type: string
+      firebase:
+        $ref: '#/definitions/domain.FirebaseConfig'
+      id:
+        type: string
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        type: string
+      orgId:
+        type: string
+      provider:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  domain.APNSConfig:
+    properties:
+      bundleId:
+        type: string
+      keyId:
+        type: string
+      keyPath:
+        type: string
+      production:
+        type: boolean
+      teamId:
+        type: string
+    type: object
+  domain.FirebaseConfig:
+    properties:
+      credential:
+        type: string
+      projectId:
+        type: string
+    type: object
+  domain.ListResult-domain_AppConfig:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/domain.AppConfig'
+        type: array
+      pagination:
+        $ref: '#/definitions/domain.PaginationResult'
     type: object
   domain.SubscriberPrefs:
     properties:
@@ -216,8 +276,14 @@ definitions:
         items:
           $ref: '#/definitions/domain.ChannelType'
         type: array
+      customFilter:
+        type: object
       eventType:
         type: string
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
       templateRefs:
         additionalProperties:
           type: string
@@ -259,8 +325,16 @@ definitions:
         type: object
       pushToken:
         type: string
+      pushTokens:
+        additionalProperties:
+          type: string
+        type: object
       subscriberId:
         type: string
+      subscribedEventTypes:
+        items:
+          type: string
+        type: array
       webhookUrl:
         type: string
     type: object
@@ -287,7 +361,7 @@ definitions:
     type: object
 info:
   contact: {}
-  description: API for templates, groups, subscribers, and rules
+  description: API for organizations, customers, templates, groups, subscribers, rules, and app configurations
   title: NotifyX API
   version: "1.0"
 paths:
@@ -1046,6 +1120,250 @@ paths:
       summary: Update a template (merge patch)
       tags:
       - templates
+  /app-configs:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - default: 0
+        description: Page number (0-based)
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ListResult-domain_AppConfig'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List app configurations
+      tags:
+      - app-configs
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: App configuration data
+        in: body
+        name: appConfig
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers_appconfig.appConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.AppConfig'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new app configuration
+      tags:
+      - app-configs
+  /app-configs/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: App Config ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an app configuration
+      tags:
+      - app-configs
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: App Config ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.AppConfig'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get an app configuration by ID
+      tags:
+      - app-configs
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: App Config ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: App configuration patch data
+        in: body
+        name: appConfig
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers_appconfig.appConfigPatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.AppConfig'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Partially update an app configuration
+      tags:
+      - app-configs
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: App Config ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: App configuration data
+        in: body
+        name: appConfig
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers_appconfig.appConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.AppConfig'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.AppConfig'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create or update an app configuration (full object)
+      tags:
+      - app-configs
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

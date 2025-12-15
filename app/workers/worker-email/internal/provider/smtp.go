@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/smtp"
 	"strings"
+
+	"github.com/go-playground/validator/v10"
 )
 
 // SMTPProvider implements email sending via SMTP
@@ -18,22 +20,29 @@ type SMTPProvider struct {
 }
 
 type SMTPConfig struct {
-	Host     string
-	Port     string
-	Username string
-	Password string
-	From     string
+	Host     string `validate:"required"` // SMTP server host
+	Port     string // SMTP server port (defaults to 587 if empty)
+	Username string // SMTP username (optional)
+	Password string // SMTP password (optional)
+	From     string `validate:"required"` // From email address
 }
 
 func NewSMTPProvider(cfg SMTPConfig) (*SMTPProvider, error) {
-	if cfg.Host == "" {
-		return nil, fmt.Errorf("email: smtp host is required")
+	validate := validator.New()
+	if err := validate.Struct(cfg); err != nil {
+		var validationErrors []string
+		if validationErrs, ok := err.(validator.ValidationErrors); ok {
+			for _, fieldError := range validationErrs {
+				validationErrors = append(validationErrors, fmt.Sprintf("%s is required", fieldError.Field()))
+			}
+		} else {
+			validationErrors = append(validationErrors, err.Error())
+		}
+		return nil, fmt.Errorf("email: validation failed: %s", strings.Join(validationErrors, "; "))
 	}
+
 	if cfg.Port == "" {
 		cfg.Port = "587" // Default to TLS port
-	}
-	if cfg.From == "" {
-		return nil, fmt.Errorf("email: from address is required")
 	}
 
 	auth := smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.Host)

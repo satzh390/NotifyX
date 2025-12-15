@@ -12,6 +12,7 @@ NotifyX is a high-performance, event-driven notification system designed to deli
 - **Extensible**: Allow custom notifiers, template providers, and user-storage backends
 - **Reliable**: Support retry strategies and configurable delivery semantics
 - **Multi-channel**: Support for Email, SMS, Push, and Webhook notifications
+- **Multi-app Push**: Support for multiple push notification apps per organization with per-app provider configuration
 - **Custom Filters**: Business-specific filtering logic for subscribers
 
 ## Documentation

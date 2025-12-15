@@ -31,11 +31,12 @@ app/
     │
     ├── worker-push/     # Push notification worker project
     │   ├── cmd/         # Main entry point
-    │   ├── config/      # Push-specific config
+    │   ├── config/      # Push-specific config (base config only)
     │   ├── internal/
-    │   │   ├── provider/    # Push providers (APN, Firebase)
+    │   │   ├── provider/    # Push providers (APNS, Firebase, ProviderManager)
     │   │   └── worker/      # Push worker implementation
     │   └── go.mod
+    │   # Note: Push providers are configured via AppConfig API (multi-app support)
     │
     └── worker-webhook/  # Webhook worker project
         ├── cmd/         # Main entry point
@@ -92,14 +93,26 @@ Each worker has its own config file:
 
 - `workers/worker-sms/config/config.yaml` - SMS worker config
 - `workers/worker-email/config/config.yaml` - Email worker config
-- `workers/worker-push/config/config.yaml` - Push worker config
+- `workers/worker-push/config/config.yaml` - Push worker base config (providers via AppConfig API)
 - `workers/worker-webhook/config/config.yaml` - Webhook worker config
 
 Configuration can be overridden via environment variables with prefix:
 - `NOTIFYX_WORKER_SMS__*` for SMS worker
 - `NOTIFYX_WORKER_EMAIL__*` for Email worker
-- `NOTIFYX_WORKER_PUSH__*` for Push worker
+- `NOTIFYX_WORKER_PUSH__*` for Push worker (base config only)
 - `NOTIFYX_WORKER_WEBHOOK__*` for Webhook worker
+
+### Push Worker Multi-App Architecture
+
+The push worker implements a multi-app architecture:
+- **AppConfig API**: Push providers are managed via `/api/v1/app-configs` endpoints
+- **ProviderManager**: Dynamically loads providers from AppConfig store and caches them per app
+- **Multiple Tokens**: Subscribers can have multiple push tokens via `pushTokens` map (appId → token)
+- **Rule Metadata**: Rules include `metadata.appId` to route push notifications to the correct app
+
+For more details, see:
+- [Multi-App Push Design](../../docs/MULTI_APP_PUSH_DESIGN.md)
+- [Multi-App Push Implementation](../../docs/MULTI_APP_PUSH_IMPLEMENTATION.md)
 
 ## Kafka Topics
 

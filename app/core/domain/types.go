@@ -24,7 +24,8 @@ type Subscriber struct {
 	CustomerID           string            `json:"customerId" bson:"customerId" immutable:"true"`
 	Email                string            `json:"email,omitempty" bson:"email,omitempty"`
 	Phone                string            `json:"phone,omitempty" bson:"phone,omitempty"`
-	PushToken            string            `json:"pushToken,omitempty" bson:"pushToken,omitempty"`
+	PushToken            string            `json:"pushToken,omitempty" bson:"pushToken,omitempty"`   // Deprecated: Use PushTokens instead
+	PushTokens           map[string]string `json:"pushTokens,omitempty" bson:"pushTokens,omitempty"` // Map of appId -> push token
 	WebhookURL           string            `json:"webhookUrl,omitempty" bson:"webhookUrl,omitempty"`
 	Preferences          SubscriberPrefs   `json:"preferences" bson:"preferences"`
 	Groups               []string          `json:"groups" bson:"groups"`
@@ -100,6 +101,7 @@ type Rule struct {
 	Channels     []ChannelType          `json:"channels" bson:"channels"`
 	TemplateRefs map[ChannelType]string `json:"templateRefs" bson:"templateRefs"`
 	CustomFilter *CustomFilterConfig    `json:"customFilter,omitempty" bson:"customFilter,omitempty"` // Optional custom filter configuration
+	Metadata     map[string]string      `json:"metadata,omitempty" bson:"metadata,omitempty"`         // Rule metadata (e.g., appId for push notifications)
 	CreatedAt    time.Time              `json:"createdAt" bson:"createdAt" immutable:"true"`
 	UpdatedAt    time.Time              `json:"updatedAt" bson:"updatedAt"`
 }
@@ -210,4 +212,41 @@ type Customer struct {
 	Metadata  map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
 	CreatedAt time.Time         `json:"createdAt" bson:"createdAt" immutable:"true"`
 	UpdatedAt time.Time         `json:"updatedAt" bson:"updatedAt"`
+}
+
+// PushProviderType represents the type of push notification provider
+type PushProviderType string
+
+const (
+	PushProviderAPNS     PushProviderType = "apns"
+	PushProviderFirebase PushProviderType = "firebase"
+	PushProviderMock     PushProviderType = "mock"
+)
+
+// AppConfig represents push notification configuration for an app, bound to an Organization
+type AppConfig struct {
+	ID        string            `json:"id" bson:"id" immutable:"true"`
+	OrgID     string            `json:"orgId" bson:"orgId" immutable:"true"`
+	Name      string            `json:"name" bson:"name"`                             // App name/identifier
+	Provider  PushProviderType  `json:"provider" bson:"provider"`                     // "apns", "firebase", or "mock"
+	APNS      *APNSConfig       `json:"apns,omitempty" bson:"apns,omitempty"`         // APNS configuration (if provider is "apns")
+	Firebase  *FirebaseConfig   `json:"firebase,omitempty" bson:"firebase,omitempty"` // Firebase configuration (if provider is "firebase")
+	Metadata  map[string]string `json:"metadata,omitempty" bson:"metadata,omitempty"`
+	CreatedAt time.Time         `json:"createdAt" bson:"createdAt" immutable:"true"`
+	UpdatedAt time.Time         `json:"updatedAt" bson:"updatedAt"`
+}
+
+// APNSConfig represents APNS provider configuration
+type APNSConfig struct {
+	KeyID      string `json:"keyId" bson:"keyId"`
+	TeamID     string `json:"teamId" bson:"teamId"`
+	BundleID   string `json:"bundleId" bson:"bundleId"`
+	KeyPath    string `json:"keyPath" bson:"keyPath"` // Path to APNS key file (.p8)
+	Production bool   `json:"production" bson:"production"`
+}
+
+// FirebaseConfig represents Firebase provider configuration
+type FirebaseConfig struct {
+	ProjectID  string `json:"projectId" bson:"projectId"`
+	Credential string `json:"credential" bson:"credential"` // Path to Firebase service account JSON file
 }

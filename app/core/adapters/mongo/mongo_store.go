@@ -45,6 +45,7 @@ func NewStoreSet(ctx context.Context, opts Options) (storage.Stores, func(contex
 		Customers:     &CustomerRepository{collection: db.Collection(prefix + "customers")},
 		DeliveryTasks: &DeliveryTaskRepository{collection: db.Collection(prefix + "deliveryTasks")},
 		DeliveryLogs:   &DeliveryLogRepository{collection: db.Collection(prefix + "deliveryLogs")},
+		AppConfigs:     &AppConfigRepository{collection: db.Collection(prefix + "appConfigs")},
 	}
 
 	cleanup := func(ctx context.Context) error {

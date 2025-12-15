@@ -3,8 +3,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/sideshow/apns2"
 	"github.com/sideshow/apns2/payload"
 	"github.com/sideshow/apns2/token"
@@ -17,25 +19,33 @@ type APNSProvider struct {
 }
 
 type APNSConfig struct {
-	KeyID      string // APNS Key ID (for token-based auth)
-	TeamID     string // Apple Developer Team ID
-	BundleID   string // App Bundle ID
-	KeyPath    string // Path to APNS key file (.p8)
+	KeyID      string `validate:"required"` // APNS Key ID (for token-based auth)
+	TeamID     string `validate:"required"` // Apple Developer Team ID
+	BundleID   string `validate:"required"` // App Bundle ID
+	KeyPath    string `validate:"required"` // Path to APNS key file (.p8)
 	Production bool   // Use production APNS gateway (false = sandbox)
 }
 
 func NewAPNSProvider(ctx context.Context, cfg APNSConfig) (*APNSProvider, error) {
-	if cfg.KeyPath == "" {
-		return nil, fmt.Errorf("apns: key path is required")
-	}
-	if cfg.KeyID == "" || cfg.TeamID == "" {
-		return nil, fmt.Errorf("apns: keyId and teamId are required")
-	}
-	if cfg.BundleID == "" {
-		return nil, fmt.Errorf("apns: bundleId is required")
+	validate := validator.New()
+	if err := validate.Struct(cfg); err != nil {
+		var validationErrors []string
+		if validationErrs, ok := err.(validator.ValidationErrors); ok {
+			for _, fieldError := range validationErrs {
+				validationErrors = append(validationErrors, fmt.Sprintf("%s is required", fieldError.Field()))
+			}
+		} else {
+			validationErrors = append(validationErrors, err.Error())
+		}
+		return nil, fmt.Errorf("apns: validation failed: %s", strings.Join(validationErrors, "; "))
 	}
 
 	// Load the auth key from file
+	// Security: The key file should:
+	// 1. Never be committed to version control (add *.p8 to .gitignore)
+	// 2. Have restricted permissions (chmod 600 on Unix)
+	// 3. Be stored in a secure location outside the project directory
+	// 4. In production, consider using secret managers (AWS Secrets Manager, HashiCorp Vault, etc.)
 	authKey, err := token.AuthKeyFromFile(cfg.KeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("apns: load auth key: %w", err)

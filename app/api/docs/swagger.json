@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "API for templates, groups, subscribers, and rules",
+        "description": "API for organizations, customers, templates, groups, subscribers, rules, and app configurations",
         "title": "NotifyX API",
         "contact": {},
         "version": "1.0"

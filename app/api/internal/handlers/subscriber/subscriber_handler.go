@@ -26,8 +26,10 @@ type SubscriberRequest struct {
 	Email string `json:"email" validate:"omitempty,email" example:"user@example.com"`
 	// Phone - optional phone number
 	Phone string `json:"phone"`
-	// PushToken - optional push notification token
+	// PushToken - optional push notification token (deprecated: use PushTokens instead)
 	PushToken string `json:"pushToken"`
+	// PushTokens - optional map of appId -> push notification token
+	PushTokens map[string]string `json:"pushTokens"`
 	// WebhookURL - optional, must be valid URL format if provided
 	WebhookURL string `json:"webhookUrl" validate:"omitempty,url" example:"https://example.com/webhook"`
 	// Groups - list of group IDs this subscriber belongs to
@@ -54,8 +56,10 @@ type SubscriberPatchRequest struct {
 	Email string `json:"email" validate:"omitempty,email" example:"user@example.com"`
 	// Phone - optional phone number
 	Phone string `json:"phone"`
-	// PushToken - optional push notification token
+	// PushToken - optional push notification token (deprecated: use PushTokens instead)
 	PushToken string `json:"pushToken"`
+	// PushTokens - optional map of appId -> push notification token
+	PushTokens map[string]string `json:"pushTokens"`
 	// WebhookURL - optional, must be valid URL format if provided
 	WebhookURL string `json:"webhookUrl" validate:"omitempty,url" example:"https://example.com/webhook"`
 	// Groups - list of group IDs this subscriber belongs to
@@ -105,6 +109,7 @@ func (handler *SubscriberHandler) Create(fiberCtx *fiber.Ctx) error {
 		Email:                body.Email,
 		Phone:                body.Phone,
 		PushToken:            body.PushToken,
+		PushTokens:           body.PushTokens,
 		WebhookURL:           body.WebhookURL,
 		Groups:               body.Groups,
 		SubscribedEventTypes: body.SubscribedEventTypes,
@@ -208,6 +213,7 @@ func (handler *SubscriberHandler) Put(fiberCtx *fiber.Ctx) error {
 		Email:                body.Email,
 		Phone:                body.Phone,
 		PushToken:            body.PushToken,
+		PushTokens:           body.PushTokens,
 		WebhookURL:           body.WebhookURL,
 		Groups:               body.Groups,
 		SubscribedEventTypes: body.SubscribedEventTypes,

@@ -40,12 +40,14 @@ NotifyX is separated into four horizontally scalable layers, each pluggable:
 
 - Tenant-scoped subscribers: create/update subscribers
 - Stored per-subscriber:
-  - Contact info: `email`, `phone`, `webhookUrl`, `pushToken`
+  - Contact info: `email`, `phone`, `webhookUrl`, `pushTokens` (map of appId → token)
   - Preferences: enabled channels, language, DND window
   - Subscribed event types (opt-ins)
   - Metadata
 - Subscribers can belong to multiple groups
 - Subscribers are scoped to a `customerId` (which may be nested under an `orgId`)
+- **Push Tokens**: `pushTokens` is a map of `appId → pushToken` to support multiple apps per subscriber
+  - Legacy `pushToken` field is deprecated but still supported for backward compatibility
 
 **Group Management**
 
@@ -58,8 +60,17 @@ NotifyX is separated into four horizontally scalable layers, each pluggable:
 
 - CRUD templates (Email, SMS, Push, Webhook JSON)
 - Rules map `eventType` → channels + template
+- Rules support `metadata` field (e.g., `appId` for push notifications)
 - Supported recipient types: `subscriberIds[]`, `groups[]`, `broadcast` (all subscribers), `directEmails[]`, `directPhones[]`
 - Versioning, preview, test-send
+
+**App Configuration (Push Notifications)**
+
+- **AppConfig**: Push notification configuration bound to Organization
+  - Each app has its own provider configuration (APNS, Firebase, etc.)
+  - Managed via `/api/v1/app-configs` endpoints
+  - App identification comes from `Rule.Metadata["appId"]`
+  - Providers are cached per app in the push worker
 
 ### 2) Event Processing Layer (Ingest + Fanout)
 
@@ -141,7 +152,8 @@ UI features:
 - **Subscriber**
   - `subscriberId` (external eg: UserId, immutable)
   - `customerId` (scopes the subscriber to a tenant or business unit, immutable)
-  - `email`, `phone`, `pushToken`, `webhookUrl`
+  - `email`, `phone`, `pushTokens` (map of appId → token), `webhookUrl`
+  - `pushToken` (deprecated, use `pushTokens` instead)
   - `preferences` { channels: { email/sms/push/webhook: true/false }, language, allowedDays[], notificationWindow { start, end } }
   - `subscribedEventTypes: [string]` (opt-in event types)
   - `groups: [groupId]` (many-to-many membership)
@@ -167,6 +179,16 @@ UI features:
   - `customerId` (immutable)
   - `channels[]`
   - `templateRefs` (map of channel → template ID)
+  - `metadata` (optional, e.g., `appId` for push notifications)
+  - `createdAt` (immutable), `updatedAt`
+
+- **AppConfig** (Push Notifications)
+  - `id` (app identifier, immutable)
+  - `orgId` (immutable, links to organization)
+  - `name` (app name)
+  - `provider` ("apns", "firebase", or "mock")
+  - `apns` (APNS configuration if provider is "apns")
+  - `firebase` (Firebase configuration if provider is "firebase")
   - `createdAt` (immutable), `updatedAt`
 
 - **Template**

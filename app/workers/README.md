@@ -47,14 +47,24 @@ go run ./cmd
 Each worker has its own configuration file:
 - `worker-sms/config/config.yaml`
 - `worker-email/config/config.yaml`
-- `worker-push/config/config.yaml`
+- `worker-push/config/config.yaml` (Note: Push providers are configured via AppConfig API, not static config)
 - `worker-webhook/config/config.yaml`
 
 Configuration can be overridden via environment variables:
 - `NOTIFYX_WORKER_SMS__*` for SMS worker
 - `NOTIFYX_WORKER_EMAIL__*` for Email worker
-- `NOTIFYX_WORKER_PUSH__*` for Push worker
+- `NOTIFYX_WORKER_PUSH__*` for Push worker (base config only, providers via AppConfig API)
 - `NOTIFYX_WORKER_WEBHOOK__*` for Webhook worker
+
+### Push Worker Multi-App Support
+
+The push worker supports multiple apps per organization:
+- **AppConfig**: Push providers are configured via `/api/v1/app-configs` endpoints
+- **ProviderManager**: Dynamically loads and caches providers per app
+- **Subscriber PushTokens**: Subscribers can have multiple push tokens (one per app)
+- **Rule Metadata**: Rules include `metadata.appId` to identify which app to use
+
+See [Multi-App Push Design](../docs/MULTI_APP_PUSH_DESIGN.md) for details.
 
 ## Kafka Topics
 

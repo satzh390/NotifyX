@@ -32,9 +32,20 @@ spec:
         - name: config
           mountPath: /app/config.yaml
           subPath: config.yaml
+        {{- if and (eq $worker "push") $.Values.workers.push.secrets.enabled }}
+        - name: apns-secrets
+          mountPath: /etc/secrets/apns
+          readOnly: true
+        {{- end }}
       volumes:
       - name: config
         configMap:
           name: {{ include "notifyx.fullname" $ }}-worker-{{ $worker }}-config
+      {{- if and (eq $worker "push") $.Values.workers.push.secrets.enabled }}
+      - name: apns-secrets
+        secret:
+          secretName: {{ include "notifyx.fullname" $ }}-worker-push-apns-secret
+          defaultMode: 0400  # Read-only for owner only (security best practice)
+      {{- end }}
 {{- end }}
 

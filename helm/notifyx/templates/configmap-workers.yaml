@@ -51,9 +51,11 @@ data:
           secretKey: ""
           endpoint: "http://localstack:4566"
     {{- else if eq $worker "push" }}
-    push:
-      provider:
-        type: "mock"
+    # Push worker now uses ProviderManager for multi-app support
+    # Push providers are configured via AppConfig API (app-configs endpoints)
+    # Each app can have its own provider configuration (APNS, Firebase, etc.)
+    # See: /api/v1/app-configs endpoints for managing app configurations
+    push: {}
     {{- else if eq $worker "webhook" }}
     webhook:
       provider:

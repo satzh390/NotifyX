@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupPushWorkerIntegration(t *testing.T) (*worker.PushWorker, func(), provider.Provider) {
+func setupPushWorkerIntegration(t *testing.T) (*worker.PushWorker, func(), *provider.ProviderManager) {
 	ctx := context.Background()
 
 	// Connect to test MongoDB
@@ -29,8 +29,34 @@ func setupPushWorkerIntegration(t *testing.T) (*worker.PushWorker, func(), provi
 	})
 	require.NoError(t, err)
 
-	// Use simple mock provider for testing
-	pushProvider := provider.NewMockPushProvider()
+	// Create a test organization and customer
+	orgID := "test-org-1"
+	customerID := "test-customer-1"
+	customer := domain.Customer{
+		ID:     customerID,
+		OrgID:  orgID,
+		Name:   "Test Customer",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	err = stores.Customers.Put(ctx, customer)
+	require.NoError(t, err)
+
+	// Create a test AppConfig with mock provider
+	appID := "test-app-1"
+	appConfig := domain.AppConfig{
+		ID:        appID,
+		OrgID:     orgID,
+		Name:      "Test App",
+		Provider:  domain.PushProviderMock,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	err = stores.AppConfigs.Put(ctx, appConfig)
+	require.NoError(t, err)
+
+	// Create ProviderManager
+	providerManager := provider.NewProviderManager(stores.AppConfigs, stores.Customers, slog.Default())
 
 	// Create base worker
 	baseWorker := workerlib.NewBaseWorker(workerlib.BaseWorkerOptions{
@@ -41,13 +67,13 @@ func setupPushWorkerIntegration(t *testing.T) (*worker.PushWorker, func(), provi
 	})
 
 	// Create Push worker
-	pushWorker := worker.NewPushWorker(baseWorker, pushProvider)
+	pushWorker := worker.NewPushWorker(baseWorker, providerManager)
 
 	return pushWorker, func() {
 		if cleanup != nil {
 			_ = cleanup(ctx)
 		}
-	}, pushProvider
+	}, providerManager
 }
 
 func TestPushWorker_Integration(t *testing.T) {
@@ -73,7 +99,7 @@ func TestPushWorker_Integration(t *testing.T) {
 		err := pushWorker.GetTemplateStore().Put(ctx, template)
 		require.NoError(t, err)
 
-		// Create a delivery task
+		// Create a delivery task with appId in metadata and PushTokens map
 		task := domain.DeliveryTask{
 			TaskID:      "test-task-1",
 			CustomerID:  "test-customer-1",
@@ -81,11 +107,16 @@ func TestPushWorker_Integration(t *testing.T) {
 			Channel:     domain.ChannelPush,
 			TemplateRef: "test-template-1",
 			Subscriber: domain.Subscriber{
-				ID:        "sub-1",
-				PushToken: "fcm-token-123456789",
+				ID: "sub-1",
+				PushTokens: map[string]string{
+					"test-app-1": "fcm-token-123456789",
+				},
 				Preferences: domain.SubscriberPrefs{
 					Language: "en",
 				},
+			},
+			Metadata: map[string]string{
+				"appId": "test-app-1",
 			},
 			Payload: map[string]interface{}{
 				"name":    "John",
@@ -127,7 +158,7 @@ func TestPushWorker_Integration(t *testing.T) {
 		err := pushWorker.GetTemplateStore().Put(ctx, template)
 		require.NoError(t, err)
 
-		// Create a delivery task with Spanish preference
+		// Create a delivery task with Spanish preference, appId in metadata and PushTokens map
 		task := domain.DeliveryTask{
 			TaskID:      "test-task-2",
 			CustomerID:  "test-customer-1",
@@ -135,11 +166,16 @@ func TestPushWorker_Integration(t *testing.T) {
 			Channel:     domain.ChannelPush,
 			TemplateRef: "test-template-2",
 			Subscriber: domain.Subscriber{
-				ID:        "sub-2",
-				PushToken: "fcm-token-987654321",
+				ID: "sub-2",
+				PushTokens: map[string]string{
+					"test-app-1": "fcm-token-987654321",
+				},
 				Preferences: domain.SubscriberPrefs{
 					Language: "es",
 				},
+			},
+			Metadata: map[string]string{
+				"appId": "test-app-1",
 			},
 			Payload: map[string]interface{}{
 				"name": "Juan",

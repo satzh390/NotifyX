@@ -63,6 +63,13 @@ type DeliveryLogStore interface {
 	List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.DeliveryLog], error)
 }
 
+type AppConfigStore interface {
+	Put(ctx context.Context, appConfig domain.AppConfig) error
+	Get(ctx context.Context, orgID, appID string) (domain.AppConfig, error)
+	List(ctx context.Context, opts domain.ListOptions) (domain.ListResult[domain.AppConfig], error)
+	Delete(ctx context.Context, orgID, appID string) error
+}
+
 type Stores struct {
 	Subscribers    SubscriberStore
 	Groups         GroupStore
@@ -72,4 +79,5 @@ type Stores struct {
 	Customers      CustomerStore
 	DeliveryTasks  DeliveryTaskStore
 	DeliveryLogs   DeliveryLogStore
+	AppConfigs     AppConfigStore
 }

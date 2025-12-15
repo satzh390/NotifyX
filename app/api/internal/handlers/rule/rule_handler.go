@@ -28,6 +28,8 @@ type RuleRequest struct {
 	// CustomFilter - optional custom filter configuration. The filter type must match a registered custom filter name.
 	// Custom filters are NOT applied to direct emails and phone numbers.
 	CustomFilter *domain.CustomFilterConfig `json:"customFilter,omitempty"`
+	// Metadata - optional key-value pairs for additional data (e.g., appId for push notifications)
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // RulePatchRequest is used for PATCH requests - only mutable fields, no required validation
@@ -39,6 +41,8 @@ type RulePatchRequest struct {
 	// CustomFilter - optional custom filter configuration. The filter type must match a registered custom filter name.
 	// Custom filters are NOT applied to direct emails and phone numbers.
 	CustomFilter *domain.CustomFilterConfig `json:"customFilter,omitempty"`
+	// Metadata - optional key-value pairs for additional data (e.g., appId for push notifications)
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // CreateRule godoc
@@ -65,6 +69,7 @@ func (handler *RuleHandler) Create(fiberCtx *fiber.Ctx) error {
 		Channels:     body.Channels,
 		TemplateRefs: body.TemplateRefs,
 		CustomFilter: body.CustomFilter,
+		Metadata:     body.Metadata,
 	}
 
 	if err := handler.store.Put(context.Background(), rule); err != nil {
@@ -150,6 +155,7 @@ func (handler *RuleHandler) Put(fiberCtx *fiber.Ctx) error {
 		Channels:     body.Channels,
 		TemplateRefs: body.TemplateRefs,
 		CustomFilter: body.CustomFilter,
+		Metadata:     body.Metadata,
 	}
 
 	if err := handler.store.Put(context.Background(), rule); err != nil {
