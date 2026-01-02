@@ -27,7 +27,7 @@ Start all services as local processes, connecting to Docker network for infrastr
 This will:
 - Start API on port 8080
 - Start Processor
-- Start all Workers (email, sms, push, webhook)
+- Start all Workers (email, sms, push)
 - All services connect to infrastructure running in Docker
 
 **Stop services:**
@@ -75,7 +75,6 @@ This starts:
 - LocalStack (port 4566)
 - OAuth Mock Server (port 8081)
 - MailHog (ports 1025, 8025)
-- Webhook Receiver (port 8888)
 
 ## Network Architecture
 

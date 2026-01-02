@@ -26,7 +26,7 @@ type TemplateRequest struct {
 	ID string `json:"id" example:"template-123"`
 	// Name is required - the name of the template
 	Name string `json:"name" validate:"required" example:"Order Confirmation"`
-	// Channel is required - the notification channel type (email, sms, push, webhook)
+	// Channel is required - the notification channel type (email, sms, push)
 	Channel domain.ChannelType `json:"channel" validate:"required" example:"email"`
 	// Version - template version number
 	Version int `json:"version"`
@@ -34,7 +34,6 @@ type TemplateRequest struct {
 	// For email: body is required
 	// For SMS: body is required
 	// For push: body or title is required
-	// For webhook: payload or body is required
 	Content domain.TemplateContent `json:"content"`
 	// Translations - optional translations by language code
 	Translations map[string]domain.TemplateContent `json:"translations,omitempty"`

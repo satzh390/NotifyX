@@ -91,10 +91,6 @@ jobs:
         working-directory: app/workers/worker-push
         run: go test ./... -v -timeout 5m
 
-      - name: Run unit tests - Worker Webhook
-        working-directory: app/workers/worker-webhook
-        run: go test ./... -v -timeout 5m
-
       # Integration Tests
       - name: Run integration tests - Core
         working-directory: app/core
@@ -124,12 +120,6 @@ jobs:
 
       - name: Run integration tests - Worker Push
         working-directory: app/workers/worker-push
-        env:
-          MONGODB_URI: mongodb://localhost:27017
-        run: go test -tags=integration ./... -v -timeout 10m
-
-      - name: Run integration tests - Worker Webhook
-        working-directory: app/workers/worker-webhook
         env:
           MONGODB_URI: mongodb://localhost:27017
         run: go test -tags=integration ./... -v -timeout 10m
@@ -197,12 +187,6 @@ jobs:
           go mod download
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../../artifacts/worker-push ./cmd/main.go
 
-      - name: Build Worker Webhook binary
-        run: |
-          cd app/workers/worker-webhook
-          go mod download
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../../artifacts/worker-webhook ./cmd/main.go
-
       # Build Docker images
       - name: Build API Docker image
         run: docker build -f app/api/Dockerfile -t notifyx-api:ci .
@@ -219,9 +203,6 @@ jobs:
       - name: Build Worker Push Docker image
         run: docker build -f app/workers/worker-push/Dockerfile -t notifyx-worker-push:ci .
 
-      - name: Build Worker Webhook Docker image
-        run: docker build -f app/workers/worker-webhook/Dockerfile -t notifyx-worker-webhook:ci .
-
       # Save Docker images as artifacts
       - name: Save API Docker image
         run: docker save notifyx-api:ci | gzip > artifacts/notifyx-api.tar.gz
@@ -237,9 +218,6 @@ jobs:
 
       - name: Save Worker Push Docker image
         run: docker save notifyx-worker-push:ci | gzip > artifacts/notifyx-worker-push.tar.gz
-
-      - name: Save Worker Webhook Docker image
-        run: docker save notifyx-worker-webhook:ci | gzip > artifacts/notifyx-worker-webhook.tar.gz
 
       # Upload artifacts
       - name: Upload build artifacts

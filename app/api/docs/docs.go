@@ -1456,11 +1456,6 @@ const docTemplate = `{
                 "body": {
                     "type": "string"
                 },
-                "payload": {
-                    "description": "Webhook content (arbitrary JSON)",
-                    "type": "object",
-                    "additionalProperties": {}
-                },
                 "subject": {
                     "description": "Email content",
                     "type": "string"

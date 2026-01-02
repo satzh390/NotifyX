@@ -26,7 +26,7 @@ Shared library for NotifyX worker implementations. This library provides common 
 
 ## Usage
 
-Each channel-specific worker (SMS, Email, Push, Webhook) imports this library and:
+Each channel-specific worker (SMS, Email, Push) imports this library and:
 
 1. Creates a `BaseWorker` with channel-specific configuration
 2. Implements channel-specific task processing
