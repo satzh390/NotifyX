@@ -67,15 +67,10 @@ func (w *PushWorker) ProcessTask(ctx context.Context, task domain.DeliveryTask) 
 	}
 
 	// Get push token for this app
-	// Support both PushTokens map and legacy PushToken field for backward compatibility
-	var pushToken string
-	if task.Subscriber.PushTokens != nil {
-		pushToken = task.Subscriber.PushTokens[appID]
+	if task.Subscriber.PushTokens == nil {
+		return fmt.Errorf("push: subscriber has no push tokens")
 	}
-	// Fallback to legacy PushToken if PushTokens map doesn't have the appId
-	if pushToken == "" {
-		pushToken = task.Subscriber.PushToken
-	}
+	pushToken := task.Subscriber.PushTokens[appID]
 	if pushToken == "" {
 		return fmt.Errorf("push: subscriber has no push token for appId %s", appID)
 	}

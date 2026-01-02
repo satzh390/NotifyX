@@ -56,12 +56,6 @@ data:
     # Each app can have its own provider configuration (APNS, Firebase, etc.)
     # See: /api/v1/app-configs endpoints for managing app configurations
     push: {}
-    {{- else if eq $worker "webhook" }}
-    webhook:
-      provider:
-        type: "http"
-        http:
-          timeout: "30s"
     {{- end }}
 {{- end }}
 

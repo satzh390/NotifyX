@@ -121,10 +121,6 @@ func validateTemplateContent(channel domain.ChannelType, content domain.Template
 		if content.Body == "" && content.Title == "" {
 			return errors.New("body or title is required for push templates")
 		}
-	case domain.ChannelWebhook:
-		if content.Payload == nil && content.Body == "" {
-			return errors.New("payload or body is required for webhook templates")
-		}
 	default:
 		return errors.New("unsupported channel type")
 	}

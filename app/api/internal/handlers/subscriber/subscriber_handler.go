@@ -26,12 +26,8 @@ type SubscriberRequest struct {
 	Email string `json:"email" validate:"omitempty,email" example:"user@example.com"`
 	// Phone - optional phone number
 	Phone string `json:"phone"`
-	// PushToken - optional push notification token (deprecated: use PushTokens instead)
-	PushToken string `json:"pushToken"`
 	// PushTokens - optional map of appId -> push notification token
 	PushTokens map[string]string `json:"pushTokens"`
-	// WebhookURL - optional, must be valid URL format if provided
-	WebhookURL string `json:"webhookUrl" validate:"omitempty,url" example:"https://example.com/webhook"`
 	// Groups - list of group IDs this subscriber belongs to
 	Groups []string `json:"groups"`
 	// SubscribedEventTypes - list of event types this subscriber opted into
@@ -56,12 +52,8 @@ type SubscriberPatchRequest struct {
 	Email string `json:"email" validate:"omitempty,email" example:"user@example.com"`
 	// Phone - optional phone number
 	Phone string `json:"phone"`
-	// PushToken - optional push notification token (deprecated: use PushTokens instead)
-	PushToken string `json:"pushToken"`
 	// PushTokens - optional map of appId -> push notification token
 	PushTokens map[string]string `json:"pushTokens"`
-	// WebhookURL - optional, must be valid URL format if provided
-	WebhookURL string `json:"webhookUrl" validate:"omitempty,url" example:"https://example.com/webhook"`
 	// Groups - list of group IDs this subscriber belongs to
 	Groups []string `json:"groups"`
 	// SubscribedEventTypes - list of event types this subscriber opted into
@@ -86,7 +78,7 @@ type SubscriberPatchRequest struct {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param subscriber body SubscriberRequest true "Subscriber data (email must be valid email format if provided, webhookUrl must be valid URL if provided)"
+// @Param subscriber body SubscriberRequest true "Subscriber data (email must be valid email format if provided)"
 // @Success 201 {object} domain.Subscriber
 // @Failure 400 {object} map[string]string "Bad request - validation error (e.g., invalid email format, invalid URL format)"
 // @Failure 500 {object} map[string]string
@@ -108,9 +100,7 @@ func (handler *SubscriberHandler) Create(fiberCtx *fiber.Ctx) error {
 		CustomerID:           customerID,
 		Email:                body.Email,
 		Phone:                body.Phone,
-		PushToken:            body.PushToken,
 		PushTokens:           body.PushTokens,
-		WebhookURL:           body.WebhookURL,
 		Groups:               body.Groups,
 		SubscribedEventTypes: body.SubscribedEventTypes,
 		Metadata:             body.Metadata,
@@ -212,9 +202,7 @@ func (handler *SubscriberHandler) Put(fiberCtx *fiber.Ctx) error {
 		CustomerID:           customerID,
 		Email:                body.Email,
 		Phone:                body.Phone,
-		PushToken:            body.PushToken,
 		PushTokens:           body.PushTokens,
-		WebhookURL:           body.WebhookURL,
 		Groups:               body.Groups,
 		SubscribedEventTypes: body.SubscribedEventTypes,
 		Metadata:             body.Metadata,

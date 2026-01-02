@@ -8,10 +8,9 @@ type (
 )
 
 const (
-	ChannelEmail   ChannelType = "email"
-	ChannelSMS     ChannelType = "sms"
-	ChannelPush    ChannelType = "push"
-	ChannelWebhook ChannelType = "webhook"
+	ChannelEmail ChannelType = "email"
+	ChannelSMS   ChannelType = "sms"
+	ChannelPush  ChannelType = "push"
 
 	EventStatusPending   EventStatus = "pending"
 	EventStatusFanout    EventStatus = "fanout"
@@ -24,9 +23,7 @@ type Subscriber struct {
 	CustomerID           string            `json:"customerId" bson:"customerId" immutable:"true"`
 	Email                string            `json:"email,omitempty" bson:"email,omitempty"`
 	Phone                string            `json:"phone,omitempty" bson:"phone,omitempty"`
-	PushToken            string            `json:"pushToken,omitempty" bson:"pushToken,omitempty"`   // Deprecated: Use PushTokens instead
 	PushTokens           map[string]string `json:"pushTokens,omitempty" bson:"pushTokens,omitempty"` // Map of appId -> push token
-	WebhookURL           string            `json:"webhookUrl,omitempty" bson:"webhookUrl,omitempty"`
 	Preferences          SubscriberPrefs   `json:"preferences" bson:"preferences"`
 	Groups               []string          `json:"groups" bson:"groups"`
 	SubscribedEventTypes []string          `json:"subscribedEventTypes,omitempty" bson:"subscribedEventTypes,omitempty"`
@@ -68,9 +65,6 @@ type TemplateContent struct {
 	// Push notification content
 	Title string `json:"title,omitempty" bson:"title,omitempty"`
 	// Body is reused for push body
-
-	// Webhook content (arbitrary JSON)
-	Payload map[string]any `json:"payload,omitempty" bson:"payload,omitempty"`
 }
 
 // Template represents a notification template with channel-specific content and translations

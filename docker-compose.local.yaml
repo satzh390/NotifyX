@@ -107,14 +107,3 @@ services:
     networks:
       - notifyx-net
       - notifyx-infra-net
-
-  webhook-receiver:
-    build:
-      context: ./infrastructure/webhook-receiver
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    ports:
-      - "8888:8888"  # Webhook receiver
-    networks:
-      - notifyx-net
-      - notifyx-infra-net

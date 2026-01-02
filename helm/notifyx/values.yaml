@@ -53,7 +53,6 @@ processor:
       email: "notifyx-worker-email"
       sms: "notifyx-worker-sms"
       push: "notifyx-worker-push"
-      webhook: "notifyx-worker-webhook"
 
 # Workers Configuration
 workers:
@@ -109,14 +108,6 @@ workers:
       apnsKey: ""  # Base64 encoded key content (if using Helm values)
       # For per-app keys: Mount multiple secrets or use external secret manager
       # In AppConfig, set apns.keyPath to the mounted secret path (e.g., "/etc/secrets/apns/app1-key.p8")
-  
-  webhook:
-    image:
-      repository: notifyx/notifyx-worker-webhook
-      tag: "latest"
-    replicaCount: 2
-    resources:
-      requests:
         cpu: 50m
         memory: 64Mi
       limits:

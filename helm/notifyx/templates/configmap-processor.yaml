@@ -30,7 +30,6 @@ data:
         email: "{{ .Values.processor.config.workerTopics.email }}"
         sms: "{{ .Values.processor.config.workerTopics.sms }}"
         push: "{{ .Values.processor.config.workerTopics.push }}"
-        webhook: "{{ .Values.processor.config.workerTopics.webhook }}"
     
     cache:
       redis:

@@ -85,16 +85,3 @@ services:
     deploy:
       replicas: 1
 
-  worker-webhook:
-    image: notifyx-worker-webhook:latest
-    container_name: notifyx-worker-webhook
-    restart: unless-stopped
-    environment:
-      - NOTIFYX_WORKER_WEBHOOK_CONFIG=/app/config.yaml
-    networks:
-      - notifyx-net
-      - infra-net
-    # Note: Infrastructure services should be running in notifyx-infra-net network
-    deploy:
-      replicas: 1
-

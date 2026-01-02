@@ -1205,14 +1205,12 @@ const docTemplate = `{
             "enum": [
                 "email",
                 "sms",
-                "push",
-                "webhook"
+                "push"
             ],
             "x-enum-varnames": [
                 "ChannelEmail",
                 "ChannelSMS",
-                "ChannelPush",
-                "ChannelWebhook"
+                "ChannelPush"
             ]
         },
         "domain.Group": {
@@ -1382,13 +1380,7 @@ const docTemplate = `{
                 "preferences": {
                     "$ref": "#/definitions/domain.SubscriberPrefs"
                 },
-                "pushToken": {
-                    "type": "string"
-                },
                 "subscriberId": {
-                    "type": "string"
-                },
-                "webhookUrl": {
                     "type": "string"
                 }
             }
@@ -1588,13 +1580,7 @@ const docTemplate = `{
                         }
                     }
                 },
-                "pushToken": {
-                    "type": "string"
-                },
                 "subscriberId": {
-                    "type": "string"
-                },
-                "webhookUrl": {
                     "type": "string"
                 }
             }

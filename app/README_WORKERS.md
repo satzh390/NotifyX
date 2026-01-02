@@ -36,15 +36,6 @@ app/
     │   │   ├── provider/    # Push providers (APNS, Firebase, ProviderManager)
     │   │   └── worker/      # Push worker implementation
     │   └── go.mod
-    │   # Note: Push providers are configured via AppConfig API (multi-app support)
-    │
-    └── worker-webhook/  # Webhook worker project
-        ├── cmd/         # Main entry point
-        ├── config/      # Webhook-specific config
-        ├── internal/
-        │   ├── provider/    # Webhook providers (HTTP)
-        │   └── worker/      # Webhook worker implementation
-        └── go.mod
 ```
 
 ## Worker Library (`workerx`)
@@ -81,10 +72,6 @@ go run cmd/main.go
 # Push Worker
 cd app/workers/worker-push
 go run cmd/main.go
-
-# Webhook Worker
-cd app/workers/worker-webhook
-go run cmd/main.go
 ```
 
 ## Configuration
@@ -94,13 +81,11 @@ Each worker has its own config file:
 - `workers/worker-sms/config/config.yaml` - SMS worker config
 - `workers/worker-email/config/config.yaml` - Email worker config
 - `workers/worker-push/config/config.yaml` - Push worker base config (providers via AppConfig API)
-- `workers/worker-webhook/config/config.yaml` - Webhook worker config
 
 Configuration can be overridden via environment variables with prefix:
 - `NOTIFYX_WORKER_SMS__*` for SMS worker
 - `NOTIFYX_WORKER_EMAIL__*` for Email worker
 - `NOTIFYX_WORKER_PUSH__*` for Push worker (base config only)
-- `NOTIFYX_WORKER_WEBHOOK__*` for Webhook worker
 
 ### Push Worker Multi-App Architecture
 
@@ -121,7 +106,6 @@ Each worker listens to its specific topic:
 - SMS: `notifyx-worker-sms`
 - Email: `notifyx-worker-email`
 - Push: `notifyx-worker-push`
-- Webhook: `notifyx-worker-webhook`
 
 These topics are configured in the processor's `config.yaml` under `worker.topics`.
 

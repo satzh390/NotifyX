@@ -5,13 +5,11 @@ definitions:
     - email
     - sms
     - push
-    - webhook
     type: string
     x-enum-varnames:
     - ChannelEmail
     - ChannelSMS
     - ChannelPush
-    - ChannelWebhook
   domain.Group:
     properties:
       description:
@@ -125,15 +123,11 @@ definitions:
         type: string
       preferences:
         $ref: '#/definitions/domain.SubscriberPrefs'
-      pushToken:
-        type: string
       pushTokens:
         additionalProperties:
           type: string
         type: object
       subscriberId:
-        type: string
-      webhookUrl:
         type: string
     type: object
   domain.AppConfig:
@@ -235,10 +229,6 @@ definitions:
     properties:
       body:
         type: string
-      payload:
-        additionalProperties: {}
-        description: Webhook content (arbitrary JSON)
-        type: object
       subject:
         description: Email content
         type: string
@@ -323,8 +313,6 @@ definitions:
                 type: string
             type: object
         type: object
-      pushToken:
-        type: string
       pushTokens:
         additionalProperties:
           type: string
@@ -335,8 +323,6 @@ definitions:
         items:
           type: string
         type: array
-      webhookUrl:
-        type: string
     type: object
   internal_handlers_template.templateRequest:
     properties:

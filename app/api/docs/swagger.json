@@ -1198,14 +1198,12 @@
             "enum": [
                 "email",
                 "sms",
-                "push",
-                "webhook"
+                "push"
             ],
             "x-enum-varnames": [
                 "ChannelEmail",
                 "ChannelSMS",
-                "ChannelPush",
-                "ChannelWebhook"
+                "ChannelPush"
             ]
         },
         "domain.Group": {
@@ -1375,13 +1373,7 @@
                 "preferences": {
                     "$ref": "#/definitions/domain.SubscriberPrefs"
                 },
-                "pushToken": {
-                    "type": "string"
-                },
                 "subscriberId": {
-                    "type": "string"
-                },
-                "webhookUrl": {
                     "type": "string"
                 }
             }
@@ -1581,13 +1573,7 @@
                         }
                     }
                 },
-                "pushToken": {
-                    "type": "string"
-                },
                 "subscriberId": {
-                    "type": "string"
-                },
-                "webhookUrl": {
                     "type": "string"
                 }
             }

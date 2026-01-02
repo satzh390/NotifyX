@@ -80,9 +80,6 @@ func (repo *TemplateRepository) GetByLanguage(ctx context.Context, customerID, t
 			if translatedContent.Title != "" {
 				template.Content.Title = translatedContent.Title
 			}
-			if translatedContent.Payload != nil {
-				template.Content.Payload = translatedContent.Payload
-			}
 		}
 	}
 

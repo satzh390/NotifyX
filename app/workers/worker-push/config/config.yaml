@@ -24,16 +24,3 @@ delivery:
     taskTopic: "notifyx-delivery-tasks"
     logTopic: "notifyx-delivery-logs"
 
-push:
-  provider:
-    type: "firebase" # "firebase", "apns", or "mock" for testing
-    firebase:
-      projectId: ""
-      credential: "" # Path to Firebase service account JSON file
-    apns:
-      keyId: ""
-      teamId: ""
-      bundleId: ""
-      keyPath: ""
-      production: false
-

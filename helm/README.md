@@ -170,7 +170,6 @@ helm/notifyx/
 - **email**: SMTP email delivery
 - **sms**: AWS SNS SMS delivery
 - **push**: Firebase/APNS push notifications
-- **webhook**: HTTP webhook delivery
 
 Each worker:
 - Consumes from dedicated Kafka topic

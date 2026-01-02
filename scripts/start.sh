@@ -89,10 +89,6 @@ start_direct() {
     NOTIFYX_WORKER_PUSH_CONFIG="config/config.yaml" go run ./cmd/main.go &
     echo $! > /tmp/notifyx-worker-push.pid
     
-    cd "$PROJECT_ROOT/app/workers/worker-webhook"
-    NOTIFYX_WORKER_WEBHOOK_CONFIG="config/config.yaml" go run ./cmd/main.go &
-    echo $! > /tmp/notifyx-worker-webhook.pid
-    
     print_info "All services started in direct mode"
     print_info "API: http://localhost:8080"
     print_info "Use 'scripts/stop.sh' to stop all services"
@@ -117,7 +113,6 @@ build_images() {
     docker build -f app/workers/worker-email/Dockerfile -t notifyx-worker-email:latest .
     docker build -f app/workers/worker-sms/Dockerfile -t notifyx-worker-sms:latest .
     docker build -f app/workers/worker-push/Dockerfile -t notifyx-worker-push:latest .
-    docker build -f app/workers/worker-webhook/Dockerfile -t notifyx-worker-webhook:latest .
     
     print_info "All images built successfully"
 }

@@ -88,10 +88,6 @@ function Start-Direct {
     $env:NOTIFYX_WORKER_PUSH_CONFIG = "config\config.yaml"
     Start-Process -FilePath "go" -ArgumentList "run", "./cmd/main.go" -WindowStyle Hidden
     
-    Set-Location "$ProjectRoot\app\workers\worker-webhook"
-    $env:NOTIFYX_WORKER_WEBHOOK_CONFIG = "config\config.yaml"
-    Start-Process -FilePath "go" -ArgumentList "run", "./cmd/main.go" -WindowStyle Hidden
-    
     Write-Info "All services started in direct mode"
     Write-Info "API: http://localhost:8080"
     Write-Info "Check Task Manager to stop processes"
@@ -115,7 +111,6 @@ function Build-Images {
     docker build -f app/workers/worker-email/Dockerfile -t notifyx-worker-email:latest .
     docker build -f app/workers/worker-sms/Dockerfile -t notifyx-worker-sms:latest .
     docker build -f app/workers/worker-push/Dockerfile -t notifyx-worker-push:latest .
-    docker build -f app/workers/worker-webhook/Dockerfile -t notifyx-worker-webhook:latest .
     
     Write-Info "All images built successfully"
 }

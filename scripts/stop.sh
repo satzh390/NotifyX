@@ -28,7 +28,7 @@ if [ -f /tmp/notifyx-processor.pid ]; then
 fi
 
 # Stop workers
-for worker in email sms push webhook; do
+for worker in email sms push; do
     if [ -f /tmp/notifyx-worker-$worker.pid ]; then
         PID=$(cat /tmp/notifyx-worker-$worker.pid)
         if ps -p $PID > /dev/null 2>&1; then

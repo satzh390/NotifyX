@@ -93,13 +93,6 @@ func TestSubscriberHandler_Create_ValidationError(t *testing.T) {
 				"email": "invalid-email",
 			},
 		},
-		{
-			name: "invalid webhook URL",
-			body: map[string]interface{}{
-				"email":      "test@example.com",
-				"webhookUrl": "not-a-valid-url",
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -310,12 +303,6 @@ func TestSubscriberHandler_Patch_ValidationError(t *testing.T) {
 			name: "invalid email format in patch",
 			body: map[string]interface{}{
 				"email": "invalid-email",
-			},
-		},
-		{
-			name: "invalid webhook URL in patch",
-			body: map[string]interface{}{
-				"webhookUrl": "not-a-valid-url",
 			},
 		},
 	}
