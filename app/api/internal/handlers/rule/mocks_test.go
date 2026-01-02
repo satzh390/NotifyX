@@ -17,8 +17,8 @@ func (mockStore *MockRuleStore) Put(ctx context.Context, rule domain.Rule) error
 	return args.Error(0)
 }
 
-func (mockStore *MockRuleStore) Get(ctx context.Context, orgID, eventType string) (domain.Rule, error) {
-	args := mockStore.Called(ctx, orgID, eventType)
+func (mockStore *MockRuleStore) Get(ctx context.Context, customerID, eventType string) (domain.Rule, error) {
+	args := mockStore.Called(ctx, customerID, eventType)
 	return args.Get(0).(domain.Rule), args.Error(1)
 }
 
@@ -27,7 +27,7 @@ func (mockStore *MockRuleStore) List(ctx context.Context, opts domain.ListOption
 	return args.Get(0).(domain.ListResult[domain.Rule]), args.Error(1)
 }
 
-func (mockStore *MockRuleStore) Delete(ctx context.Context, orgID, eventType string) error {
-	args := mockStore.Called(ctx, orgID, eventType)
+func (mockStore *MockRuleStore) Delete(ctx context.Context, customerID, eventType string) error {
+	args := mockStore.Called(ctx, customerID, eventType)
 	return args.Error(0)
 }

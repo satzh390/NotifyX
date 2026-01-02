@@ -17,17 +17,17 @@ func (mockStore *MockTemplateStore) Put(ctx context.Context, template domain.Tem
 	return args.Error(0)
 }
 
-func (mockStore *MockTemplateStore) Get(ctx context.Context, orgID, templateID string) (domain.Template, error) {
-	args := mockStore.Called(ctx, orgID, templateID)
+func (mockStore *MockTemplateStore) Get(ctx context.Context, customerID, templateID string) (domain.Template, error) {
+	args := mockStore.Called(ctx, customerID, templateID)
 	return args.Get(0).(domain.Template), args.Error(1)
 }
 
-func (mockStore *MockTemplateStore) GetByLanguage(ctx context.Context, orgID, templateID, language string) (domain.Template, error) {
-	args := mockStore.Called(ctx, orgID, templateID, language)
+func (mockStore *MockTemplateStore) GetByLanguage(ctx context.Context, customerID, templateID, language string) (domain.Template, error) {
+	args := mockStore.Called(ctx, customerID, templateID, language)
 	return args.Get(0).(domain.Template), args.Error(1)
 }
 
-func (mockStore *MockTemplateStore) Delete(ctx context.Context, orgID, templateID string) error {
-	args := mockStore.Called(ctx, orgID, templateID)
+func (mockStore *MockTemplateStore) Delete(ctx context.Context, customerID, templateID string) error {
+	args := mockStore.Called(ctx, customerID, templateID)
 	return args.Error(0)
 }

@@ -227,6 +227,22 @@ func (processor *Processor) processChunk(ctx context.Context, subscribers []doma
 			}
 			subscriberID := getSubscriberIdentifier(entry.Subscriber)
 			taskID, idempotencyKey := generateTaskID(env.EventID(), customerID, subscriberID, channel)
+			
+			// Copy event metadata to task metadata
+			taskMetadata := make(map[string]string)
+			if env.Meta != nil {
+				for k, v := range env.Meta {
+					taskMetadata[k] = v
+				}
+			}
+			
+			// For push channel, extract appId from Rule.Metadata if present
+			if channel == domain.ChannelPush && rule.Metadata != nil {
+				if appId, ok := rule.Metadata["appId"]; ok && appId != "" {
+					taskMetadata["appId"] = appId
+				}
+			}
+			
 			task := domain.DeliveryTask{
 				TaskID:         taskID,
 				IdempotencyKey: idempotencyKey,
@@ -236,7 +252,7 @@ func (processor *Processor) processChunk(ctx context.Context, subscribers []doma
 				Channel:        channel,
 				TemplateRef:    templateRef,
 				Payload:        env.Payload,
-				Metadata:       env.Meta,
+				Metadata:       taskMetadata,
 			}
 			envelopes = append(envelopes, fanout.Envelope{Channel: channel, Task: task})
 		}

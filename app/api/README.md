@@ -137,6 +137,137 @@ All list endpoints support pagination with the following query parameters:
 GET /api/v1/groups?page=0&pageSize=10&sortBy=name:asc,createdAt:desc
 ```
 
+## API Endpoints
+
+### Core Resources
+
+- **Organizations**: `/api/v1/organizations` - Manage organizations
+- **Customers**: `/api/v1/customers` - Manage customers (bound to organizations)
+- **Subscribers**: `/api/v1/subscribers` - Manage subscribers
+- **Groups**: `/api/v1/groups` - Manage subscriber groups
+- **Templates**: `/api/v1/templates` - Manage notification templates
+- **Rules**: `/api/v1/rules` - Manage event routing rules
+- **App Configs**: `/api/v1/app-configs` - Manage push notification app configurations
+
+### App Configuration (Push Notifications)
+
+The AppConfig API allows you to manage push notification configurations for multiple apps within an organization.
+
+**Create AppConfig:**
+```bash
+curl -X POST "http://localhost:8080/api/v1/app-configs" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "id": "my-ios-app",
+    "name": "My iOS App",
+    "provider": "apns",
+    "apns": {
+      "keyId": "YOUR_KEY_ID",
+      "teamId": "YOUR_TEAM_ID",
+      "bundleId": "com.yourcompany.app",
+      "keyPath": "/etc/secrets/apns/apns-key.p8",
+      "production": false
+    }
+  }'
+```
+
+**Get AppConfig:**
+```bash
+curl -X GET "http://localhost:8080/api/v1/app-configs/my-ios-app" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**List AppConfigs:**
+```bash
+curl -X GET "http://localhost:8080/api/v1/app-configs?page=0&pageSize=20" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Update AppConfig:**
+```bash
+curl -X PUT "http://localhost:8080/api/v1/app-configs/my-ios-app" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "id": "my-ios-app",
+    "name": "My iOS App Updated",
+    "provider": "apns",
+    "apns": {
+      "keyId": "NEW_KEY_ID",
+      "teamId": "YOUR_TEAM_ID",
+      "bundleId": "com.yourcompany.app",
+      "keyPath": "/etc/secrets/apns/apns-key.p8",
+      "production": true
+    }
+  }'
+```
+
+**Delete AppConfig:**
+```bash
+curl -X DELETE "http://localhost:8080/api/v1/app-configs/my-ios-app" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Subscriber Push Tokens
+
+Subscribers now support multiple push tokens via the `pushTokens` map:
+
+**Create Subscriber with Push Tokens:**
+```bash
+curl -X POST "http://localhost:8080/api/v1/subscribers" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "subscriberId": "user-123",
+    "email": "user@example.com",
+    "pushTokens": {
+      "my-ios-app": "apns-token-123",
+      "my-android-app": "fcm-token-456"
+    },
+    "preferences": {
+      "channels": {
+        "push": true
+      },
+      "language": "en"
+    }
+  }'
+```
+
+**Update Push Tokens:**
+```bash
+curl -X PATCH "http://localhost:8080/api/v1/subscribers/user-123" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "pushTokens": {
+      "my-ios-app": "new-apns-token-789",
+      "my-android-app": "fcm-token-456"
+    }
+  }'
+```
+
+### Rules with App ID
+
+For push notifications, include `appId` in Rule metadata:
+
+**Create Rule with App ID:**
+```bash
+curl -X POST "http://localhost:8080/api/v1/rules" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "eventType": "order.created",
+    "channels": ["push"],
+    "templateRefs": {
+      "push": "order-notification-template"
+    },
+    "metadata": {
+      "appId": "my-ios-app"
+    }
+  }'
+```
+
 ## API Documentation
 
 Once the API is running, access the interactive Swagger documentation at:

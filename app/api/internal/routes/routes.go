@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/notifyx/api/internal/handlers/appconfig"
 	"github.com/notifyx/api/internal/handlers/customer"
 	"github.com/notifyx/api/internal/handlers/group"
 	"github.com/notifyx/api/internal/handlers/organization"
@@ -114,4 +115,20 @@ func RegisterRoutes(app *fiber.App, stores storage.Stores, validator httpx.AuthV
 		customerHandler.Patch)
 	customers.Delete("/:id", httpx.RequireAuth(validator, notifyWritePermission), customerHandler.Delete)
 	customers.Get("", customerHandler.List)
+
+	// App Configs CRUD
+	appConfigHandler := appconfig.NewAppConfigHandler(stores.AppConfigs, stores.Customers)
+	appConfigs := api.Group("/app-configs", httpx.RequireAuth(validator, notifyReadPermission))
+	appConfigs.Post("",
+		httpx.RequireAuth(validator, notifyWritePermission),
+		appConfigHandler.Create)
+	appConfigs.Get("/:id", appConfigHandler.Get)
+	appConfigs.Put("/:id",
+		httpx.RequireAuth(validator, notifyWritePermission),
+		appConfigHandler.Put)
+	appConfigs.Patch("/:id",
+		httpx.RequireAuth(validator, notifyWritePermission),
+		appConfigHandler.Patch)
+	appConfigs.Delete("/:id", httpx.RequireAuth(validator, notifyWritePermission), appConfigHandler.Delete)
+	appConfigs.Get("", appConfigHandler.List)
 }

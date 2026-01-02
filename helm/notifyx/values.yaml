@@ -1,0 +1,140 @@
+# Default values for notifyx
+# This is a YAML-formatted file.
+
+imageRegistry: docker.io
+imagePullPolicy: IfNotPresent
+
+# API Configuration
+api:
+  image:
+    repository: notifyx/notifyx-api
+    tag: "latest"
+  replicaCount: 2
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  config:
+    httpAddr: ":8080"
+    oauthIssuer: "http://oauth-service:8081/default"
+    oauthJwks: "http://oauth-service:8081/default/jwks"
+    mongoURI: "mongodb://mongo:27017"
+    mongoDatabase: "notifyx"
+
+# Processor Configuration
+processor:
+  image:
+    repository: notifyx/notifyx-processor
+    tag: "latest"
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  config:
+    kafkaBrokers:
+      - "kafka:9092"
+    kafkaGroupId: "notifyx-processor"
+    kafkaInputTopic: "notifyx-events"
+    kafkaDLQTopic: "notifyx-events-dlq"
+    mongoURI: "mongodb://mongo:27017"
+    mongoDatabase: "notifyx"
+    redisAddr: "redis:6379"
+    workerTopics:
+      email: "notifyx-worker-email"
+      sms: "notifyx-worker-sms"
+      push: "notifyx-worker-push"
+
+# Workers Configuration
+workers:
+  email:
+    image:
+      repository: notifyx/notifyx-worker-email
+      tag: "latest"
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+  
+  sms:
+    image:
+      repository: notifyx/notifyx-worker-sms
+      tag: "latest"
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+  
+  push:
+    image:
+      repository: notifyx/notifyx-worker-push
+      tag: "latest"
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    # Push providers are now configured via AppConfig API (multi-app support)
+    # Each app can have its own provider configuration (APNS, Firebase, etc.)
+    # See: /api/v1/app-configs endpoints for managing app configurations
+    # 
+    # Secrets section: Optional - for mounting shared APNS keys
+    # Note: For per-app keys, configure keyPath in AppConfig to point to mounted secrets
+    # or use external secret managers (AWS Secrets Manager, etc.)
+    secrets:
+      enabled: false  # Set to true to enable secret mounting for shared APNS keys
+      # APNS Key - base64 encoded .p8 file content
+      # Create secret: kubectl create secret generic notifyx-worker-push-apns-secret --from-file=apns-key.p8=/path/to/AuthKey_XXXXXXXXXX.p8
+      apnsKey: ""  # Base64 encoded key content (if using Helm values)
+      # For per-app keys: Mount multiple secrets or use external secret manager
+      # In AppConfig, set apns.keyPath to the mounted secret path (e.g., "/etc/secrets/apns/app1-key.p8")
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+# Infrastructure dependencies (external)
+infrastructure:
+  mongo:
+    host: "mongo"
+    port: 27017
+  kafka:
+    brokers:
+      - "kafka:9092"
+  redis:
+    host: "redis"
+    port: 6379
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: notifyx.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+

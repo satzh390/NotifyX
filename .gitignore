@@ -1,1 +1,14 @@
 *.exe
+artifacts/
+
+# Security: API keys and certificates - NEVER commit these
+*.p8
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+**/secrets/
+**/keys/
+*.env.local
+*.env.production

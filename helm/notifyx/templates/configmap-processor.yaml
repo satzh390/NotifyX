@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "notifyx.fullname" . }}-processor-config
+  labels:
+    {{- include "notifyx.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    kafka:
+      brokers:
+        {{- range .Values.processor.config.kafkaBrokers }}
+        - "{{ . }}"
+        {{- end }}
+      groupId: "{{ .Values.processor.config.kafkaGroupId }}"
+      inputTopic: "{{ .Values.processor.config.kafkaInputTopic }}"
+      dlqTopic: "{{ .Values.processor.config.kafkaDLQTopic }}"
+      minBytes: 10000
+      maxBytes: 1000000
+      maxWait: "1s"
+      commitInterval: "5s"
+    
+    storage:
+      mongo:
+        uri: "{{ .Values.processor.config.mongoURI }}"
+        database: "{{ .Values.processor.config.mongoDatabase }}"
+        collectionPrefix: ""
+    
+    worker:
+      topics:
+        email: "{{ .Values.processor.config.workerTopics.email }}"
+        sms: "{{ .Values.processor.config.workerTopics.sms }}"
+        push: "{{ .Values.processor.config.workerTopics.push }}"
+    
+    cache:
+      redis:
+        enabled: true
+        addr: "{{ .Values.processor.config.redisAddr }}"
+        db: 0
+        pass: ""
+        ttl: "5m"
+

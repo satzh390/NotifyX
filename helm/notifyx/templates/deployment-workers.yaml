@@ -1,0 +1,51 @@
+{{- range $worker, $config := .Values.workers }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "notifyx.fullname" $ }}-worker-{{ $worker }}
+  labels:
+    {{- include "notifyx.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: worker-{{ $worker }}
+spec:
+  replicas: {{ $config.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "notifyx.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: worker-{{ $worker }}
+  template:
+    metadata:
+      labels:
+        {{- include "notifyx.selectorLabels" $ | nindent 8 }}
+        app.kubernetes.io/component: worker-{{ $worker }}
+    spec:
+      containers:
+      - name: worker-{{ $worker }}
+        image: "{{ $.Values.imageRegistry }}/{{ $config.image.repository }}:{{ $config.image.tag }}"
+        imagePullPolicy: {{ $.Values.imagePullPolicy }}
+        env:
+        - name: NOTIFYX_WORKER_{{ $worker | upper }}_CONFIG
+          value: "/app/config.yaml"
+        resources:
+          {{- toYaml $config.resources | nindent 10 }}
+        volumeMounts:
+        - name: config
+          mountPath: /app/config.yaml
+          subPath: config.yaml
+        {{- if and (eq $worker "push") $.Values.workers.push.secrets.enabled }}
+        - name: apns-secrets
+          mountPath: /etc/secrets/apns
+          readOnly: true
+        {{- end }}
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "notifyx.fullname" $ }}-worker-{{ $worker }}-config
+      {{- if and (eq $worker "push") $.Values.workers.push.secrets.enabled }}
+      - name: apns-secrets
+        secret:
+          secretName: {{ include "notifyx.fullname" $ }}-worker-push-apns-secret
+          defaultMode: 0400  # Read-only for owner only (security best practice)
+      {{- end }}
+{{- end }}
+

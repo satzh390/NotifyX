@@ -63,7 +63,7 @@ func TestGroupHandler_Create(t *testing.T) {
 	err = json.NewDecoder(resp.Body).Decode(&group)
 	assert.NoError(t, err)
 	assert.Equal(t, "Test Group", group.Name)
-		assert.Equal(t, "test-customer", group.CustomerID)
+	assert.Equal(t, "test-customer", group.CustomerID)
 
 	store.AssertExpectations(t)
 }

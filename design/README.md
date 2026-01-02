@@ -1,6 +1,6 @@
 # NotifyX — High-Level Architecture (Subscriber + Multi-Group Model)
 
-NotifyX is an event-driven, highly scalable, real-time notification platform designed to be modular, extensible, and easy to integrate into any infrastructure. It supports multi-channel delivery (Email, SMS, Webhooks, Push), dynamic templates, subscriber-level preferences, and flexible group-based fanout.
+NotifyX is an event-driven, highly scalable, real-time notification platform designed to be modular, extensible, and easy to integrate into any infrastructure. It supports multi-channel delivery (Email, SMS, Push), dynamic templates, subscriber-level preferences, and flexible group-based fanout.
 
 ---
 
@@ -10,7 +10,7 @@ NotifyX is an event-driven, highly scalable, real-time notification platform des
 |---|---:|---|---|
 | API + subscriber/tenant config service | `notifyx-api` | Public REST APIs | Event ingestion, organization/customer/subscriber/group/tenant management, templates, rules, authentication |
 | Event ingestion + rule evaluation | `notifyx-processor` | Consume events → apply rules → determine subscribers | Real-time fanout based on subscriber preferences & group membership |
-| Delivery worker (email, SMS, webhook, push) | `notifyx-worker` | Channel-specific delivery | Modular plugins for SendGrid, Twilio, SMTP, Push, custom adapters |
+| Delivery worker (email, SMS, push) | `notifyx-worker` | Channel-specific delivery | Modular plugins for SendGrid, Twilio, SMTP, Push, custom adapters |
 | Admin UI | `notifyx-console` | Angular/React Dashboard | Manage templates, groups, rules, subscriber profiles, logs |
 
 ---
@@ -40,12 +40,14 @@ NotifyX is separated into four horizontally scalable layers, each pluggable:
 
 - Tenant-scoped subscribers: create/update subscribers
 - Stored per-subscriber:
-  - Contact info: `email`, `phone`, `webhookUrl`, `pushToken`
+  - Contact info: `email`, `phone`, `pushTokens` (map of appId → token)
   - Preferences: enabled channels, language, DND window
   - Subscribed event types (opt-ins)
   - Metadata
 - Subscribers can belong to multiple groups
 - Subscribers are scoped to a `customerId` (which may be nested under an `orgId`)
+- **Push Tokens**: `pushTokens` is a map of `appId → pushToken` to support multiple apps per subscriber
+  - Legacy `pushToken` field is deprecated but still supported for backward compatibility
 
 **Group Management**
 
@@ -56,10 +58,19 @@ NotifyX is separated into four horizontally scalable layers, each pluggable:
 
 **Template & Rule Configuration**
 
-- CRUD templates (Email, SMS, Push, Webhook JSON)
+- CRUD templates (Email, SMS, Push)
 - Rules map `eventType` → channels + template
+- Rules support `metadata` field (e.g., `appId` for push notifications)
 - Supported recipient types: `subscriberIds[]`, `groups[]`, `broadcast` (all subscribers), `directEmails[]`, `directPhones[]`
 - Versioning, preview, test-send
+
+**App Configuration (Push Notifications)**
+
+- **AppConfig**: Push notification configuration bound to Organization
+  - Each app has its own provider configuration (APNS, Firebase, etc.)
+  - Managed via `/api/v1/app-configs` endpoints
+  - App identification comes from `Rule.Metadata["appId"]`
+  - Providers are cached per app in the push worker
 
 ### 2) Event Processing Layer (Ingest + Fanout)
 
@@ -85,7 +96,7 @@ Workers perform:
 
 - Template retrieval (S3/Blob/custom store)
 - Merge payload + subscriber attributes
-- Channel-specific formatting (email HTML + subject, SMS body, push payload, webhook JSON)
+- Channel-specific formatting (email HTML + subject, SMS body, push payload)
 - Provider communication and adapter abstraction
 - Retries with exponential backoff and DLQ routing for terminal failures
 - Emit delivery logs/status events
@@ -141,8 +152,8 @@ UI features:
 - **Subscriber**
   - `subscriberId` (external eg: UserId, immutable)
   - `customerId` (scopes the subscriber to a tenant or business unit, immutable)
-  - `email`, `phone`, `pushToken`, `webhookUrl`
-  - `preferences` { channels: { email/sms/push/webhook: true/false }, language, allowedDays[], notificationWindow { start, end } }
+  - `email`, `phone`, `pushTokens` (map of appId → token)
+  - `preferences` { channels: { email/sms/push: true/false }, language, allowedDays[], notificationWindow { start, end } }
   - `subscribedEventTypes: [string]` (opt-in event types)
   - `groups: [groupId]` (many-to-many membership)
   - `metadata` (optional)
@@ -167,13 +178,23 @@ UI features:
   - `customerId` (immutable)
   - `channels[]`
   - `templateRefs` (map of channel → template ID)
+  - `metadata` (optional, e.g., `appId` for push notifications)
+  - `createdAt` (immutable), `updatedAt`
+
+- **AppConfig** (Push Notifications)
+  - `id` (app identifier, immutable)
+  - `orgId` (immutable, links to organization)
+  - `name` (app name)
+  - `provider` ("apns", "firebase", or "mock")
+  - `apns` (APNS configuration if provider is "apns")
+  - `firebase` (Firebase configuration if provider is "firebase")
   - `createdAt` (immutable), `updatedAt`
 
 - **Template**
   - `id` (immutable)
   - `customerId` (immutable)
   - `name`, `channel` (immutable), `version`
-  - `content` (channel-specific: subject/body for email, body for SMS, title/body for push, payload for webhook)
+  - `content` (channel-specific: subject/body for email, body for SMS, title/body for push)
   - `translations` (optional, map of language code → content)
   - `metadata` (optional)
   - `createdAt` (immutable), `updatedAt`
@@ -310,7 +331,7 @@ This section breaks the work into concrete milestones, deliverables, acceptance 
   - Implement rate limiting and per-org quotas
 
 **Phase 3 — Scale & Extensibility (ongoing)**
-- Add channels (SMS, Push, Webhook), provider adapters, operator tooling (Helm charts), and anti-spam/quota enforcement
+- Add channels (SMS, Push), provider adapters, operator tooling (Helm charts), and anti-spam/quota enforcement
 
 ---
 

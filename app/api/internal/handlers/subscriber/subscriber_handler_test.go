@@ -47,7 +47,7 @@ func TestSubscriberHandler_Create(t *testing.T) {
 	})).Return(nil).Once()
 
 	// Mock Get to return the created subscriber (handler calls Get after Put)
-	store.On("Get", mock.Anything, "test-customer", mock.AnythingOfType("string")).Return(func(ctx context.Context, orgID string, id string) domain.Subscriber {
+	store.On("Get", mock.Anything, "test-customer", mock.AnythingOfType("string")).Return(func(ctx context.Context, customerID string, id string) domain.Subscriber {
 		return domain.Subscriber{
 			ID:    id,
 			CustomerID: "test-customer",
@@ -91,13 +91,6 @@ func TestSubscriberHandler_Create_ValidationError(t *testing.T) {
 			name: "invalid email format",
 			body: map[string]interface{}{
 				"email": "invalid-email",
-			},
-		},
-		{
-			name: "invalid webhook URL",
-			body: map[string]interface{}{
-				"email":      "test@example.com",
-				"webhookUrl": "not-a-valid-url",
 			},
 		},
 	}
@@ -310,12 +303,6 @@ func TestSubscriberHandler_Patch_ValidationError(t *testing.T) {
 			name: "invalid email format in patch",
 			body: map[string]interface{}{
 				"email": "invalid-email",
-			},
-		},
-		{
-			name: "invalid webhook URL in patch",
-			body: map[string]interface{}{
-				"webhookUrl": "not-a-valid-url",
 			},
 		},
 	}

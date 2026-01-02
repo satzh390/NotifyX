@@ -125,6 +125,92 @@ func TestProcessor_HandleMessage_Success(t *testing.T) {
 	publisher.AssertExpectations(t)
 }
 
+func TestProcessor_HandleMessage_WithAppIdMetadata(t *testing.T) {
+	processor, _, _, resolver, publisher, filter, ruleStore := setupTestProcessor()
+
+	customerID := "test-customer"
+	eventType := "order.created"
+	appID := "test-app-1"
+	rule := domain.Rule{
+		EventType:  eventType,
+		CustomerID: customerID,
+		Channels:   []domain.ChannelType{domain.ChannelPush},
+		TemplateRefs: map[domain.ChannelType]string{
+			domain.ChannelPush: "template-1",
+		},
+		Metadata: map[string]string{
+			"appId": appID,
+		},
+	}
+
+	subscriber := domain.Subscriber{
+		ID:         "sub-1",
+		CustomerID: customerID,
+		PushTokens: map[string]string{
+			appID: "push-token-123",
+		},
+		Preferences: domain.SubscriberPrefs{
+			Channels: map[domain.ChannelType]bool{
+				domain.ChannelPush: true,
+			},
+		},
+	}
+
+	envelope := event.CloudEventEnvelope[map[string]any]{
+		ID:          "event-1",
+		Source:      "test-source",
+		SpecVersion: "1.0",
+		CustomerID:  customerID,
+		Type:        eventType,
+		Data:        map[string]any{"orderId": "123"},
+		Recipients: domain.Recipients{
+			SubscriberIDs: []string{"sub-1"},
+		},
+		Payload: map[string]any{"orderId": "123"},
+		Time:    time.Now(),
+	}
+	envelopeJSON, _ := json.Marshal(envelope)
+
+	msg := kafka.Message{
+		Value: envelopeJSON,
+	}
+
+	// RuleResolver first tries to load global rule (customerID = ""), then customer-specific rule
+	ruleStore.On("Get", mock.Anything, "", eventType).Return(domain.Rule{}, storage.ErrNotFound).Once()
+	ruleStore.On("Get", mock.Anything, customerID, eventType).Return(rule, nil).Once()
+	resolver.On("Stream", mock.Anything, customerID, eventType, mock.Anything, mock.AnythingOfType("func(domain.Subscriber) error")).
+		Run(func(args mock.Arguments) {
+			visitor := args.Get(4).(func(domain.Subscriber) error)
+			_ = visitor(subscriber)
+		}).Return(nil).Once()
+
+	filter.On("Apply", mock.MatchedBy(func(subs []domain.Subscriber) bool {
+		return len(subs) == 1 && subs[0].ID == "sub-1"
+	}), rule, mock.Anything).Return([]filterpkg.FilteredSubscriber{
+		{
+			Subscriber: subscriber,
+			Channels:   []domain.ChannelType{domain.ChannelPush},
+		},
+	}).Once()
+
+	// Verify that the task metadata includes appId from Rule.Metadata
+	publisher.On("Publish", mock.Anything, mock.MatchedBy(func(envs []fanout.Envelope) bool {
+		if len(envs) != 1 || envs[0].Channel != domain.ChannelPush {
+			return false
+		}
+		task := envs[0].Task
+		return task.Metadata != nil && task.Metadata["appId"] == appID
+	})).Return(nil).Once()
+
+	err := processor.handleMessage(context.Background(), msg)
+
+	assert.NoError(t, err)
+	ruleStore.AssertExpectations(t)
+	resolver.AssertExpectations(t)
+	filter.AssertExpectations(t)
+	publisher.AssertExpectations(t)
+}
+
 func TestProcessor_HandleMessage_InvalidEnvelope(t *testing.T) {
 	processor, _, _, _, _, _, _ := setupTestProcessor()
 

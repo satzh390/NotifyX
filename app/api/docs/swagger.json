@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "API for templates, groups, subscribers, and rules",
+        "description": "API for organizations, customers, templates, groups, subscribers, rules, and app configurations",
         "title": "NotifyX API",
         "contact": {},
         "version": "1.0"
@@ -1198,14 +1198,12 @@
             "enum": [
                 "email",
                 "sms",
-                "push",
-                "webhook"
+                "push"
             ],
             "x-enum-varnames": [
                 "ChannelEmail",
                 "ChannelSMS",
-                "ChannelPush",
-                "ChannelWebhook"
+                "ChannelPush"
             ]
         },
         "domain.Group": {
@@ -1375,13 +1373,7 @@
                 "preferences": {
                     "$ref": "#/definitions/domain.SubscriberPrefs"
                 },
-                "pushToken": {
-                    "type": "string"
-                },
                 "subscriberId": {
-                    "type": "string"
-                },
-                "webhookUrl": {
                     "type": "string"
                 }
             }
@@ -1456,11 +1448,6 @@
             "properties": {
                 "body": {
                     "type": "string"
-                },
-                "payload": {
-                    "description": "Webhook content (arbitrary JSON)",
-                    "type": "object",
-                    "additionalProperties": {}
                 },
                 "subject": {
                     "description": "Email content",
@@ -1581,13 +1568,7 @@
                         }
                     }
                 },
-                "pushToken": {
-                    "type": "string"
-                },
                 "subscriberId": {
-                    "type": "string"
-                },
-                "webhookUrl": {
                     "type": "string"
                 }
             }

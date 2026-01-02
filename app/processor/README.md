@@ -24,8 +24,30 @@ The processor will connect to Kafka and start consuming events from the configur
    - If event has explicit recipients → uses them
    - If event has no recipients → uses subscribers/groups subscribed to the event type
 4. **Filtering**: Applies subscriber preferences (disabled channels, DND windows, unsubscribed event types) and optional custom filters
-5. **Fanout**: Publishes delivery tasks to per-channel worker topics
-6. **Error Handling**: Failed events are sent to DLQ topic
+5. **Task Metadata**: For push notifications, extracts `appId` from `Rule.Metadata["appId"]` and includes it in `DeliveryTask.Metadata`
+6. **Fanout**: Publishes delivery tasks to per-channel worker topics
+7. **Error Handling**: Failed events are sent to DLQ topic
+
+### Push Notification Multi-App Support
+
+For push notifications, the processor extracts the `appId` from `Rule.Metadata["appId"]` and includes it in the `DeliveryTask.Metadata`. This allows the push worker to:
+- Identify which app configuration to use
+- Select the correct push token from `Subscriber.PushTokens[appId]`
+- Route notifications to the appropriate provider
+
+**Example Rule with App ID:**
+```json
+{
+  "eventType": "order.created",
+  "channels": ["push"],
+  "templateRefs": {
+    "push": "order-notification-template"
+  },
+  "metadata": {
+    "appId": "my-ios-app"
+  }
+}
+```
 
 ## Configuration
 
